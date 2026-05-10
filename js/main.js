@@ -11,16 +11,16 @@
 ════════════════════════════════════════════ */
 const ANIMATIONS = {
   issam: {
-    idle:   { frames: ['assets/characters/issam/idle.png', 'assets/characters/issam/idle1.png'], fps: 4, loop: true },
-    walk:   { frames: ['assets/characters/issam/walking1.png', 'assets/characters/issam/walking2.png', 'assets/characters/issam/walking3.png', 'assets/characters/issam/walking4.png'], fps: 8, loop: true },
-    jump:   { frames: ['assets/characters/issam/jumping.png'], fps: 4, loop: false },
-    crouch: { frames: ['assets/characters/issam/crouch.png'], fps: 4, loop: false },
-    punch:  { frames: ['assets/characters/issam/punch.png'], fps: 6, loop: false },
-    win:    { frames: ['assets/characters/issam/winning.png'], fps: 2, loop: false },
-    lose:   { frames: ['assets/characters/issam/losing.png'], fps: 2, loop: false },
-    special:{ frames: ['assets/characters/issam/special.png'], fps: 6, loop: false },
-    kick:   { frames: ['assets/characters/issam/special.png'], fps: 6, loop: false },
-    block:  { frames: ['assets/characters/issam/crouch.png'], fps: 4, loop: false },
+    idle:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: true },
+    walk:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: true },
+    jump:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    crouch: { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    punch:  { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    kick:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    special:{ frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    block:  { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
+    win:    { frames: ['assets/characters/issam/idle.png'], fps: 2, loop: false },
+    lose:   { frames: ['assets/characters/issam/idle.png'], fps: 2, loop: false },
   }
 };
 
@@ -34,27 +34,30 @@ class SpriteAnimator {
     this.current  = null;
     this.frameIdx = 0;
     this.timer    = null;
-    this.isPlayingOneShot = false;
+    this.busy     = false;     // true = one-shot anim is playing, NO INTERRUPTIONS
+    this.cooldown = false;     // true = cooldown active, can't attack
   }
 
   play(name, onDone) {
     if (!this.animSet[name]) return;
 
-    // If currently playing a one-shot animation, don't interrupt with idle/walk
-    if (this.isPlayingOneShot && this.animSet[name].loop) {
-      return; // Ignore loop requests (idle/walk) while one-shot is playing
+    const anim = this.animSet[name];
+
+    // COOLDOWN: if busy playing a one-shot, reject EVERYTHING except we let it finish
+    if (this.busy) {
+      return; // Hard lock - no interruptions allowed
     }
 
     // If same loop animation already playing, don't restart
-    if (this.current === name && this.animSet[name].loop) return;
+    if (this.current === name && anim.loop) return;
 
     clearInterval(this.timer);
-    this.current  = name;
+    this.current = name;
     this.frameIdx = 0;
-    this.isPlayingOneShot = !this.animSet[name].loop;
+    this.busy = !anim.loop; // One-shot = busy, loop = not busy
 
-    const anim  = this.animSet[name];
     const delay = Math.round(1000 / anim.fps);
+    const totalDuration = anim.frames.length * delay;
 
     const tick = () => {
       if (!this.el) return;
@@ -68,8 +71,12 @@ class SpriteAnimator {
         } else {
           clearInterval(this.timer);
           this.timer = null;
-          this.isPlayingOneShot = false;
-          if (onDone) onDone();
+          // Keep busy=true during cooldown, then release
+          setTimeout(() => {
+            this.busy = false;
+            this.cooldown = false;
+            if (onDone) onDone();
+          }, 200); // 200ms cooldown after anim ends
         }
       }
     };
@@ -78,10 +85,15 @@ class SpriteAnimator {
     this.timer = setInterval(tick, delay);
   }
 
+  isBusy() {
+    return this.busy;
+  }
+
   stop() {
     clearInterval(this.timer);
     this.timer = null;
-    this.isPlayingOneShot = false;
+    this.busy = false;
+    this.cooldown = false;
   }
 
   destroy() {

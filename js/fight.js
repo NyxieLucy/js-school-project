@@ -221,9 +221,9 @@ function movePlayer(player, distance) {
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
   const animator = animators[animKey];
 
-  // Don't interrupt attack animations
-  if (animator && animator.current && !animator.animSet[animator.current].loop) {
-    return; // Currently playing a one-shot animation (punch, kick, etc.)
+  // HARD STOP: if busy (punching, kicking, etc.), can't move
+  if (!animator || animator.isBusy()) {
+    return;
   }
 
   const currentLeft = parseInt(wrap.style.left || '0');
@@ -231,8 +231,8 @@ function movePlayer(player, distance) {
   wrap.style.left = newLeft + 'px';
   wrap.style.position = 'relative';
 
-  // Play walk animation ONLY if not already walking
-  if (animator && fightState.roundActive && animator.current !== 'walk') {
+  // Play walk animation
+  if (fightState.roundActive && animator.current !== 'walk') {
     animator.play('walk');
   }
 }
@@ -241,10 +241,9 @@ function stopMoving(player) {
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
   const animator = animators[animKey];
 
-  // Only return to idle if we're walking (not attacking)
-  // Delay slightly so walk doesn't feel twitchy
+  // Only return to idle if walking and NOT busy
   setTimeout(() => {
-    if (animator && animator.current === 'walk') {
+    if (animator && animator.current === 'walk' && !animator.isBusy()) {
       animator.play('idle');
     }
   }, 200);
@@ -255,20 +254,18 @@ function jumpPlayer(player) {
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
   const animator = animators[animKey];
 
-  // Don't jump if already doing a non-looping animation
-  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+  // HARD STOP: if busy, can't jump
+  if (!animator || animator.isBusy()) {
     return;
   }
 
-  if (animator && fightState.roundActive) {
-    animator.play('jump', () => {
-      if (animator && fightState.roundActive && animator.current === 'jump') {
-        animator.play('idle');
-      }
-    });
-  }
+  animator.play('jump', () => {
+    if (animator && fightState.roundActive && !animator.isBusy()) {
+      animator.play('idle');
+    }
+  });
 
-  // Visual jump - slow, floaty pixel-art feel
+  // Visual jump - slow, floaty
   wrap.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
   const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
   const currentLeft = wrap.style.left || '0';
@@ -287,28 +284,26 @@ function crouchPlayer(player) {
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
   const animator = animators[animKey];
 
-  // Don't crouch if already doing a non-looping animation
-  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+  // HARD STOP: if busy, can't crouch
+  if (!animator || animator.isBusy()) {
     return;
   }
 
-  if (animator && fightState.roundActive) {
-    animator.play('crouch');
-  }
+  animator.play('crouch');
 
-  // Visual crouch - slow, deliberate
+  // Visual crouch
   wrap.style.transition = 'transform 0.4s ease-out';
   const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
   const currentLeft = wrap.style.left || '0';
   wrap.style.transform = baseTransform + ' scaleY(0.72) translateY(35px)';
   wrap.style.left = currentLeft;
 
-  // Auto-release after 900ms - hold crouch longer
+  // Auto-release after 900ms
   setTimeout(() => {
     wrap.style.transition = 'transform 0.5s ease-out';
     wrap.style.transform = baseTransform + ' scaleY(1) translateY(0)';
     wrap.style.left = currentLeft;
-    if (animator && fightState.roundActive && animator.current === 'crouch') {
+    if (animator && fightState.roundActive && !animator.isBusy()) {
       animator.play('idle');
     }
   }, 900);
@@ -517,27 +512,25 @@ function performAttack(player, type, damageAmount) {
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
   const animator = animators[animKey];
 
-  // Don't attack if already doing a non-looping animation
-  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+  // HARD COOLDOWN: if busy, do NOTHING
+  if (!animator || animator.isBusy()) {
     return;
   }
 
-  // Visual attack lunge - slower, longer hold
+  // Visual attack lunge
   if (type !== 'block') {
     wrap.classList.add('attacking');
     setTimeout(() => wrap.classList.remove('attacking'), 700);
   }
 
-  // Play animation - callback only returns to idle if we're still on this anim
-  if (animator) {
-    animator.play(type, () => {
-      if (animator && fightState.roundActive && animator.current === type) {
-        animator.play('idle');
-      }
-    });
-  }
+  // Play animation - when done, auto-return to idle
+  animator.play(type, () => {
+    if (animator && fightState.roundActive && !animator.isBusy()) {
+      animator.play('idle');
+    }
+  });
 
-  // Target flinch animation - slow, heavy impact feel
+  // Target flinch
   if (damageAmount > 0) {
     targetWrap.style.transition = 'transform 0.2s';
     targetWrap.style.transform = player === 'p1' 
@@ -549,7 +542,7 @@ function performAttack(player, type, damageAmount) {
     }, 400);
   }
 
-  // Apply damage after hit connects
+  // Apply damage
   if (damageAmount > 0) {
     setTimeout(() => {
       damage(target, damageAmount, true);
