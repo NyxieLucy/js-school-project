@@ -1,10 +1,56 @@
 // ═══════════════════════════════════════════════════════════
 //  SOUK BRAWL — fight.js
-//  Full fight engine: input, physics, hitboxes, AI, rounds
-//  Aligned with: character.js (ROSTER, FightConfig, getSpriteWithFallback)
+//  FULLY SELF-CONTAINED — no external dependencies
+//  Embeds: ROSTER stub, FightConfig, getSpriteWithFallback, InputSystem
 // ═══════════════════════════════════════════════════════════
 
 'use strict';
+
+// ─── EMBEDDED: Minimal ROSTER (enough for Issam vs Issam) ─────
+const ROSTER = window.ROSTER || [
+  {
+    id: 'issam',
+    name: 'ISSAM',
+    nameAr: 'عصام',
+    bio: 'The street fighter from Casablanca.',
+    stats: { speed: 6, power: 7, defense: 5, range: 4, technique: 5 },
+    moves: {
+      punch: { name: 'Jab', nameAr: 'لكمة', damage: 8, hitstun: 12, kb: 4, startup: 4, active: 3, recovery: 8 },
+      kick:  { name: 'Roundhouse', nameAr: 'ركلة', damage: 12, hitstun: 16, kb: 7, startup: 6, active: 4, recovery: 10 },
+      special: { name: 'Souk Storm', nameAr: 'عاصفة السوق', damage: 25, hitstun: 30, kb: 12, startup: 12, active: 8, recovery: 20 }
+    },
+    superName: 'SOUK STORM',
+    superNameAr: 'عاصفة السوق',
+    colors: { primary: '#C41E3A', secondary: '#FFD700' }
+  }
+];
+
+// ─── EMBEDDED: FightConfig (matches character.js API) ────────
+const FightConfig = window.FightConfig || {
+  defaults: {
+    mode: 'arcade',
+    difficulty: 'normal',
+    rounds: 3,
+    timer: 60,
+    p1CharId: 'issam',
+    p2CharId: 'issam',
+    stage: 'djemaa'
+  },
+  load() {
+    try {
+      const saved = sessionStorage.getItem('soukbrawl_fight');
+      return saved ? JSON.parse(saved) : {};
+    } catch(e) {
+      return {};
+    }
+  }
+};
+
+// ─── EMBEDDED: Sprite Fallback Helper ──────────────────────────
+function getSpriteWithFallback(charId, stateName) {
+  if (window.getSpriteWithFallback) return window.getSpriteWithFallback(charId, stateName);
+  return `assets/characters/${charId}/${stateName}.png`;
+}
 
 // ─── Constants ───────────────────────────────────────────────
 const STAGE_W   = 900;
@@ -42,7 +88,7 @@ let hitStopFrames = 0;
 let shakeFrames = 0;
 let shakeMag = 0;
 
-// ─── Input System (self-contained, matches input.js API) ─────
+// ─── Input System ────────────────────────────────────────────
 class InputSystem {
   constructor() {
     this.keys = {};
@@ -73,7 +119,7 @@ class InputSystem {
   }
 }
 
-// ─── Key Bindings (lowercase to match input.js convention) ────
+// ─── Key Bindings ─────────────────────────────────────────────
 const GameConfig = {
   KEYS: {
     LEFT:    'arrowleft',
@@ -154,10 +200,10 @@ class Fighter {
   }
 
   _syncSprite() {
-    const map = { 
+    const map = {
       idle:'idle', walk:'walk', jump:'jump', punch:'punch',
       kick:'kick', block:'block', special:'special',
-      hurt:'hurt', ko:'ko' 
+      hurt:'hurt', ko:'ko'
     };
     this._loadSprite(map[this.state] || 'idle');
 
@@ -165,7 +211,26 @@ class Fighter {
       const base = this.side === 'right' ? -1 : 1;
       const flip = base * this.facing;
       const scaleX = flip < 0 ? -1 : 1;
-      this.wrapEl.style.transform = `translateX(${this.x}px) scaleX(${scaleX})`;
+
+      // Apply base transformations (translate, scale)
+      let transform = `translateX(${this.x}px) scaleX(${scaleX})`;
+
+      // Add skew for arcade effect
+      transform += ` skewX(${this.side === 'right' ? 5 : -5}deg)`;
+
+      // Add subtle bobbing effect when idle
+      if (this.state === 'idle' && !this.isAI) {
+        const bobAmount = Math.sin(frameCount * 0.1) * 2; // Gentle up/down movement
+        transform += ` translateY(${bobAmount}px)`;
+      }
+
+      // Add a slight scale effect for impact on hurt state
+      if (this.state === 'hurt') {
+        const impactScale = 1.05;
+        transform += ` scale(${impactScale})`;
+      }
+
+      this.wrapEl.style.transform = transform;
     }
   }
 
@@ -210,6 +275,8 @@ class Fighter {
       this.blockstun = Math.floor(moveData.hitstun * 0.6);
       this.state = 'block';
       this.actionFrame = this.blockstun;
+      // Add a slight visual feedback for blocking
+      this.wrapEl.style.transform += ` scale(1.02)`; // Temporary scale up on block
       this.vx = this.facing * -1.5;
     } else {
       this.hp = Math.max(0, this.hp - dmgRaw);
@@ -276,7 +343,8 @@ class Fighter {
       this.x += push;
     }
 
-    this.vx *= 0.82;
+    // Adjust friction for smoother movement feel
+    this.vx *= 0.85; // Slightly reduced friction for a bit more glide
 
     if (this.actionFrame <= 0 && this.state !== 'idle' &&
         this.state !== 'walk' && this.state !== 'jump' && this.state !== 'ko') {
@@ -441,7 +509,6 @@ const input = new InputSystem();
 const wins = { p1: 0, p2: 0 };
 
 function initFighters() {
-  // Use FightConfig from character.js (sessionStorage, key 'soukbrawl_fight')
   const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
   window._fightDifficulty = cfg.difficulty;
   totalRounds = cfg.rounds || 3;

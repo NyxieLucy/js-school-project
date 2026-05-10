@@ -24,20 +24,31 @@
 
       <!-- Player Character Panel (1254x1254 ratio) -->
       <div class="arcade-hero-section">
-        <div class="arcade-vs-divider">
-          <div class="vs-diamond">VS</div>
-          <div class="vs-line"></div>
+        <div class="vs-panel p1-panel">
+          <div class="char-info left">
+            <h2 class="char-name">ISSAM</h2>
+            <p class="char-origin">CASABLANCA</p>
+          </div>
+          <div class="panel-frame">
+            <img src="assets/characters/issam/idle.png" alt="P1" class="vs-portrait" id="p1-portrait">
+          </div>
+          <div class="p-tag p1-tag">P1</div>
         </div>
 
-        <div class="arcade-opponent-card" id="arcade-opponent">
-          <div class="arcade-opponent-frame">
-            <div class="opponent-silhouette">?</div>
+        <div class="vs-center">
+          <div class="vs-logo">VS</div>
+          <div class="vs-sub">READY?</div>
+        </div>
+
+        <div class="vs-panel p2-panel">
+          <div class="char-info right">
+            <h2 class="char-name">???</h2>
+            <p class="char-origin">UNKNOWN</p>
           </div>
-          <div class="arcade-opponent-info">
-            <div class="ah-name">???</div>
-            <div class="ah-name-ar">غير معروف</div>
-            <div class="ah-origin">UNKNOWN</div>
+          <div class="panel-frame">
+            <img src="assets/characters/unknown.png" alt="P2" class="vs-portrait" id="p2-portrait">
           </div>
+          <div class="p-tag p2-tag">P2</div>
         </div>
       </div>
 
@@ -71,19 +82,125 @@
 
   <scrip src="js/main.js">
       <script>
-    // Wait for the DOM to load
-    document.addEventListener('DOMContentLoaded', () => {
-      const startBtn = document.querySelector('.start-btn');
-      
-      if (startBtn) {
-        startBtn.addEventListener('click', () => {
-          // Here we could save the selected character/stage to localStorage first
-          // But for now, let's just get the damn game running!
-          window.location.href = 'fight.html';
-        });
+    // Ensure ROSTER is available (it's usually loaded via a script tag)
+    // We'll use GameConfig.CHARACTERS directly if ROSTER isn't immediately available
+    const ROSTER = typeof ROSTER !== 'undefined' ? ROSTER : Object.values(GameConfig.CHARACTERS);
+
+    let p1Idx = 0; // Player character index
+    let p2Idx = 1; // Opponent character index (can be randomized or selected later)
+
+    const p1NameEl = document.querySelector('.p1-panel .char-name');
+    const p1OriginEl = document.querySelector('.p1-panel .char-origin');
+    const p1ImgEl = document.getElementById('p1-portrait');
+
+    const p2NameEl = document.querySelector('.p2-panel .char-name');
+    const p2OriginEl = document.querySelector('.p2-panel .char-origin');
+    const p2ImgEl = document.getElementById('p2-portrait');
+
+    function updateDisplay() {
+      if (ROSTER.length === 0) return;
+
+      const p1 = ROSTER[p1Idx];
+      const p2 = ROSTER[p2Idx];
+
+      // Update P1 (Player Character)
+      p1NameEl.textContent = p1.name;
+      p1OriginEl.textContent = p1.origin;
+      p1ImgEl.src = p1.assets.idle; // Assuming 'assets.idle' holds the correct path
+
+      // Update P2 (Opponent Character)
+      // For arcade, we might want to set a default opponent or randomize it
+      // For now, let's use the second character in the roster or a default if not available
+      if (p2) {
+          p2NameEl.textContent = p2.name;
+          p2OriginEl.textContent = p2.origin;
+          p2ImgEl.src = p2.assets.idle;
+      } else {
+          p2NameEl.textContent = '???';
+          p2OriginEl.textContent = 'UNKNOWN';
+          p2ImgEl.src = 'assets/characters/unknown.png'; // Placeholder for unknown opponent
+      }
+
+      // Persistence for selected characters
+      localStorage.setItem('p1_selected_arcade', p1.id);
+      localStorage.setItem('p2_selected_arcade', p2 ? p2.id : 'unknown');
+    }
+
+    // Event listener for character selection
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+
+      // P1: Up/Down Arrows for character selection
+      if (e.key === 'ArrowUp') {
+        p1Idx = (p1Idx + 1) % ROSTER.length;
+        updateDisplay();
+      }
+      if (e.key === 'ArrowDown') {
+        p1Idx = (p1Idx - 1 + ROSTER.length) % ROSTER.length;
+        updateDisplay();
+      }
+
+      // P2: Left/Right Arrows for opponent selection (or some other keys)
+      // For now, let's keep opponent selection simple or randomized for arcade.
+      // We can implement a more complex selection later if needed.
+      // Example: 'ArrowLeft' and 'ArrowRight' to cycle opponents
+      if (ROSTER.length > 1) {
+          if (key === 'arrowleft') {
+            p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+            if (p1Idx === p2Idx) { // Ensure player and opponent are different
+                p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+            }
+            updateDisplay();
+          }
+          if (key === 'arrowright') {
+            p2Idx = (p2Idx + 1) % ROSTER.length;
+            if (p1Idx === p2Idx) { // Ensure player and opponent are different
+                p2Idx = (p2Idx + 1) % ROSTER.length;
+            }
+            updateDisplay();
+          }
+      }
+
+
+      // Back to Menu
+      if (key === 'x') {
+        window.location.href = 'index.html';
+      }
+
+      // Start Fight
+      if (key === 'z' || key === 'enter') {
+        startArcadeFight();
       }
     });
-    
+
+    function startArcadeFight() {
+      // Store selected characters before starting the fight
+      const p1 = ROSTER[p1Idx];
+      const p2 = ROSTER.length > 1 ? ROSTER[p2Idx] : null; // Handle case with only one character
+
+      localStorage.setItem('p1_selected_arcade', p1.id);
+      localStorage.setItem('p2_selected_arcade', p2 ? p2.id : 'unknown');
+      localStorage.setItem('difficulty', document.querySelector('.diff-btn.active').dataset.diff);
+
+      window.location.href = 'fight.html';
+    }
+
+    document.getElementById('start-arcade').addEventListener('click', startArcadeFight);
+
+    // Initialize display and background
+    document.addEventListener('DOMContentLoaded', () => {
+        if (ROSTER.length > 0) {
+            updateDisplay();
+        } else {
+            console.error("ROSTER is empty. Cannot initialize character selection.");
+            // Optionally, display a message to the user or disable start button
+        }
+        // Assuming BackgroundAnimation is available globally or via another script
+        if (typeof BackgroundAnimation !== 'undefined') {
+            new BackgroundAnimation();
+        }
+    });
+
   </script>
 </body>
 </html>

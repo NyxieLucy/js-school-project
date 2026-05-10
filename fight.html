@@ -199,6 +199,7 @@
     .arena-fighter.right { align-items: flex-end; }
 
     .fighter-sprite-arena {
+      transform: skewX(-5deg); /* Apply aggressive arcade tilt */
       width: 220px;
       height: 220px;
       image-rendering: pixelated;
@@ -235,7 +236,7 @@
     }
 
     .arena-fighter.right .fighter-sprite-arena {
-      transform: scaleX(-1);
+      transform: scaleX(-1) skewX(-5deg); /* Apply tilt and flip for right side */
     }
 
     .super-meter-wrap {
@@ -293,7 +294,7 @@
       transform: translate(-50%, -50%);
       font-size: 52px;
       color: var(--crimson-ll);
-      text-shadow: 
+      text-shadow:
         4px 4px 0 var(--crimson),
         8px 8px 0 #1A0000;
       letter-spacing: 6px;
@@ -320,7 +321,7 @@
       transform: translate(-50%, -50%);
       font-size: 72px;
       color: var(--crimson-ll);
-      text-shadow: 
+      text-shadow:
         4px 4px 0 var(--crimson),
         8px 8px 0 #1A0000;
       letter-spacing: 8px;
@@ -538,5 +539,63 @@
 
   <script src="js/main.js"></script>
   <script src="js/fight.js"></script>
+  <!-- 1. Config & Utils first (needed by main.js) -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+
+  <!-- 2. Character data (needed by fight.js) -->
+  <script src="js/character.js"></script>
+
+  <!-- 3. Main entry point -->
+  <script src="js/main.js"></script>
+
+  <!-- 4. Fight engine -->
+  <script src=\"js/fight.js\"></script>
+
+  <script>
+    // Load selected characters from localStorage
+    const player1Id = localStorage.getItem('p1_selected_arcade') || 'issam'; // Default to Issam if not found
+    const player2Id = localStorage.getItem('p2_selected_arcade') || 'zara'; // Default to Zara if not found
+
+    const player1Data = GameConfig.CHARACTERS[player1Id.toUpperCase()];
+    const player2Data = GameConfig.CHARACTERS[player2Id.toUpperCase()];
+
+    // Update HUD and Sprite elements
+    const p1NameEl = document.querySelector('.hud-side.left .hud-name');
+    const p1NameAREl = document.querySelector('.hud-side.left .hud-name-ar');
+    const p1SpriteEl = document.getElementById('sprite-p1');
+
+    const p2NameEl = document.querySelector('.hud-side.right .hud-name');
+    const p2NameAREl = document.querySelector('.hud-side.right .hud-name-ar');
+    const p2SpriteEl = document.getElementById('sprite-p2');
+
+    if (player1Data) {
+      p1NameEl.textContent = player1Data.name;
+      p1NameAREl.textContent = player1Data.nameAR;
+      p1SpriteEl.src = player1Data.assets.idle;
+      // Set initial health bar
+      document.getElementById('health-p1').style.width = `${player1Data.stats.health}%`;
+    }
+
+    if (player2Data) {
+      p2NameEl.textContent = player2Data.name;
+      p2NameAREl.textContent = player2Data.nameAR;
+      p2SpriteEl.src = player2Data.assets.idle;
+      // Set initial health bar
+      document.getElementById('health-p2').style.width = `${player2Data.stats.health}%`;
+    } else {
+      // Handle case where player 2 data is not found (e.g., default opponent)
+      console.warn('Player 2 data not found, using default.');
+      p2NameEl.textContent = '???';
+      p2NameAREl.textContent = 'غير معروف';
+      p2SpriteEl.src = 'assets/characters/unknown.png'; // Placeholder
+    }
+
+    // TODO: Implement game logic, animations, and health bar updates in fight.js
+    // Ensure fight.js can access player1Data and player2Data if needed
+    window.player1Data = player1Data;
+    window.player2Data = player2Data;
+
+  </script>
 </body>
 </html>
