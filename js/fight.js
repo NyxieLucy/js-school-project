@@ -1,31 +1,24 @@
 // ═══════════════════════════════════════════════════════════
-//  SOUK BRAWL — fight.js
-//  FULLY SELF-CONTAINED — no external dependencies
-//  Embeds: ROSTER stub, FightConfig, getSpriteWithFallback, InputSystem
+//  SOUK BRAWL — fight.js (Clean Version)
 // ═══════════════════════════════════════════════════════════
 
 'use strict';
 
-// ─── EMBEDDED: Minimal ROSTER (enough for Issam vs Issam) ─────
-const ROSTER = window.ROSTER || [
+// Use the ROSTER from character.js (the full one with multiple characters)
+const ROSTER = window.ROSTER || (typeof ROSTER !== 'undefined' ? ROSTER : [
   {
-    id: 'issam',
-    name: 'ISSAM',
-    nameAr: 'عصام',
-    bio: 'The street fighter from Casablanca.',
-    stats: { speed: 6, power: 7, defense: 5, range: 4, technique: 5 },
+    id: 'issam', name: 'ISSAM', nameAr: 'عصام',
+    stats: { speed: 6, power: 7, defense: 5 },
     moves: {
-      punch: { name: 'Jab', nameAr: 'لكمة', damage: 8, hitstun: 12, kb: 4, startup: 4, active: 3, recovery: 8 },
-      kick:  { name: 'Roundhouse', nameAr: 'ركلة', damage: 12, hitstun: 16, kb: 7, startup: 6, active: 4, recovery: 10 },
-      special: { name: 'Souk Storm', nameAr: 'عاصفة السوق', damage: 25, hitstun: 30, kb: 12, startup: 12, active: 8, recovery: 20 }
+      punch: { name: 'Jab', damage: 8, hitstun: 12, kb: 4 },
+      kick:  { name: 'Roundhouse', damage: 12, hitstun: 16, kb: 7 },
+      special: { name: 'Souk Storm', damage: 25, hitstun: 30, kb: 12 }
     },
-    superName: 'SOUK STORM',
-    superNameAr: 'عاصفة السوق',
-    colors: { primary: '#C41E3A', secondary: '#FFD700' }
+    superName: 'SOUK STORM'
   }
-];
+]);
 
-// ─── EMBEDDED: FightConfig (matches character.js API) ────────
+// Use FightConfig from character.js or main config
 const FightConfig = window.FightConfig || {
   defaults: {
     mode: 'arcade',
@@ -33,24 +26,19 @@ const FightConfig = window.FightConfig || {
     rounds: 3,
     timer: 60,
     p1CharId: 'issam',
-    p2CharId: 'issam',
-    stage: 'djemaa'
+    p2CharId: 'issam'
   },
   load() {
     try {
-      const saved = sessionStorage.getItem('soukbrawl_fight');
-      return saved ? JSON.parse(saved) : {};
-    } catch(e) {
-      return {};
-    }
+      return JSON.parse(sessionStorage.getItem('soukbrawl_fight')) || {};
+    } catch(e) { return {}; }
   }
 };
 
-// ─── EMBEDDED: Sprite Fallback Helper ──────────────────────────
-function getSpriteWithFallback(charId, stateName) {
-  if (window.getSpriteWithFallback) return window.getSpriteWithFallback(charId, stateName);
+// Sprite helper - use the one from character.js if available
+const getSpriteWithFallback = window.getSpriteWithFallback || function(charId, stateName) {
   return `assets/characters/${charId}/${stateName}.png`;
-}
+};
 
 // ─── Constants ───────────────────────────────────────────────
 const STAGE_W   = 900;
@@ -118,19 +106,10 @@ class InputSystem {
     this.prevKeys = { ...this.keys };
   }
 }
-
-// ─── Key Bindings ─────────────────────────────────────────────
-const GameConfig = {
-  KEYS: {
-    LEFT:    'arrowleft',
-    RIGHT:   'arrowright',
-    UP:      'arrowup',
-    DOWN:    'arrowdown',
-    SELECT:  'z',
-    BACK:    'x',
-    BLOCK:   'c',
-    SPECIAL: 'v'
-  }
+// Use GameConfig from config.js
+const KEYS = GameConfig?.KEYS || {
+  LEFT: 'arrowleft', RIGHT: 'arrowright', UP: 'arrowup', DOWN: 'arrowdown',
+  SELECT: 'z', BACK: 'x', BLOCK: 'c', SPECIAL: 'v'
 };
 
 // ─── Fighter Class ───────────────────────────────────────────
@@ -182,7 +161,7 @@ class Fighter {
     this.comboWrapEl = null;
     this.comboCountEl = null;
 
-    this._loadSprite('idle');
+
   }
 
   bindHUD(side) {
@@ -359,7 +338,7 @@ class Fighter {
     if (this.actionFrame > 0 && (this.state === 'hurt' || this.state === 'block')) return;
     if (this.actionFrame > 0 && ['punch','kick','special'].includes(this.state)) return;
 
-    const K = GameConfig.KEYS;
+    const K = GameConfig?.KEYS || KEYS || { LEFT: 'arrowleft', RIGHT: 'arrowright', UP: 'arrowup', DOWN: 'arrowdown', SELECT: 'z', BACK: 'x', BLOCK: 'c', SPECIAL: 'v' };
 
     this.isBlocking = inputSys.isKeyPressed(K.BLOCK) && this.onGround;
     if (this.isBlocking) {
@@ -516,16 +495,23 @@ function initFighters() {
 
   const isVersus = cfg.mode === 'versus';
 
-  const p1Data = ROSTER.find(c => c.id === (cfg.p1CharId || 'issam')) || ROSTER[0];
-  const p2Data = ROSTER.find(c => c.id === (cfg.p2CharId || 'issam')) || ROSTER[0];
+  // === BETTER CHARACTER LOADING ===
+  let p1CharId = window.selectedP1Id || cfg.p1CharId || 'issam';
+  let p2CharId = window.selectedP2Id || cfg.p2CharId || 'issam';
 
-  // Your hook: new Fighter(wrapId, imgId, charData, startX, isFacingLeft, isAI)
+  let p1Data = ROSTER.find(c => c.id === p1CharId) || ROSTER[0];
+  let p2Data = ROSTER.find(c => c.id === p2CharId) || ROSTER[0];
+
+  console.log(`Fighting: ${p1Data.name} vs ${p2Data.name}`);
+
+  // Create fighters
   p1 = new Fighter('sprite-p1-wrap', 'sprite-p1', p1Data, 200, false, false);
   p2 = new Fighter('sprite-p2-wrap', 'sprite-p2', p2Data, 700, true, !isVersus);
 
   p1.bindHUD('left');
   p2.bindHUD('right');
 
+  // Update names
   const snEl = document.querySelector('.hud-side.left .hud-name');
   const saEl = document.querySelector('.hud-side.left .hud-name-ar');
   const snEl2 = document.querySelector('.hud-side.right .hud-name');
@@ -815,7 +801,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const saEl = document.getElementById('stage-ar-fight');
   if (snEl) snEl.textContent = stageName;
   if (saEl) saEl.textContent = stageAr;
-
+  if (!animFrameId) gameLoop();
   initFighters();
   startRound();
   gameLoop();
