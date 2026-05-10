@@ -3,21 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Souk Brawl - A retro arcade fighting game featuring Kingdom fighters from Morocco" />
+  <meta name="theme-color" content="#1a1a1a" />
   <title>SOUK BRAWL — Main Menu</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+
+  <!-- Font imports -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css" />
-<base target="_blank">
+  <link rel="stylesheet" href="css/animations.css" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2724%22 font-size=%2224%22>⚔️</text></svg>" />
 </head>
+
 <body>
+  <!-- Skip to content link for accessibility -->
+  <a href="#main-menu" class="sr-only">Skip to main menu</a>
 
   <!-- ═══════════════════════════════════════ ANIMATED BACKGROUND ═══ -->
-  <canvas id="bg-canvas"></canvas>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- ═══════════════════════════════════════ MAIN MENU SCREEN ═══ -->
-  <div id="screen-main" class="screen active">
+  <div id="screen-main" class="screen active" role="main">
     <div class="main-wrap">
-
       <!-- Title Block -->
       <div class="title-block">
         <div class="title-eyebrow">المملكة — KINGDOM FIGHTERS</div>
@@ -28,12 +39,18 @@
         <div class="title-sub">حرب السوق</div>
       </div>
 
-      <!-- Single Character Showcase (1254x1254 ratio) -->
+      <!-- Single Character Showcase -->
       <div class="hero-showcase">
         <div class="hero-stage">
           <div class="hero-shadow"></div>
           <div class="hero-sprite-wrap" id="hero-sprite-wrap">
-            <img id="hero-sprite-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
+            <img 
+              id="hero-sprite-img" 
+              src="assets/characters/issam/idle.png" 
+              alt="ISSAM - Casablanca fighter" 
+              loading="lazy" 
+              decoding="async"
+            />
           </div>
           <div class="hero-name-plate">
             <div class="hero-name">ISSAM</div>
@@ -43,56 +60,75 @@
         </div>
 
         <!-- Decorative frame corners -->
-        <div class="stage-corner tl"></div>
-        <div class="stage-corner tr"></div>
-        <div class="stage-corner bl"></div>
-        <div class="stage-corner br"></div>
+        <div class="stage-corner tl" aria-hidden="true"></div>
+        <div class="stage-corner tr" aria-hidden="true"></div>
+        <div class="stage-corner bl" aria-hidden="true"></div>
+        <div class="stage-corner br" aria-hidden="true"></div>
       </div>
 
       <!-- Menu Navigation -->
-      <nav class="menu-nav" id="main-menu">
-        <a href="arcade.html" class="menu-item active" data-action="arcade">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">ARCADE MODE</span>
-          <span class="item-tag">1P</span>
-        </a>
-        <a href="versus.html" class="menu-item" data-action="vs">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">VS MODE</span>
-          <span class="item-tag">2P</span>
-        </a>
-        <a href="story.html" class="menu-item" data-action="story">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">STORY MODE</span>
-          <span class="item-tag">1P</span>
-        </a>
-        <a href="survival.html" class="menu-item" data-action="survival">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">SURVIVAL</span>
-          <span class="item-tag">1P</span>
-        </a>
-        <a href="training.html" class="menu-item" data-action="training">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">TRAINING</span>
-          <span class="item-tag">1P</span>
-        </a>
-        <a href="options.html" class="menu-item" data-action="options">
-          <span class="item-cursor">&#9658;</span>
-          <span class="item-text">OPTIONS</span>
-          <span class="item-tag"></span>
-        </a>
+      <nav class="menu-nav" id="main-menu" aria-label="Main menu" role="navigation">
+        <ul class="menu-list">
+          <li>
+            <a href="arcade.html" class="menu-item active" data-action="arcade">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">ARCADE MODE</span>
+              <span class="item-tag">1P</span>
+            </a>
+          </li>
+          <li>
+            <a href="versus.html" class="menu-item" data-action="vs">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">VS MODE</span>
+              <span class="item-tag">2P</span>
+            </a>
+          </li>
+          <li>
+            <a href="story.html" class="menu-item" data-action="story">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">STORY MODE</span>
+              <span class="item-tag">1P</span>
+            </a>
+          </li>
+          <li>
+            <a href="survival.html" class="menu-item" data-action="survival">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">SURVIVAL</span>
+              <span class="item-tag">1P</span>
+            </a>
+          </li>
+          <li>
+            <a href="training.html" class="menu-item" data-action="training">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">TRAINING</span>
+              <span class="item-tag">1P</span>
+            </a>
+          </li>
+          <li>
+            <a href="options.html" class="menu-item" data-action="options">
+              <span class="item-cursor" aria-hidden="true">▶</span>
+              <span class="item-text">OPTIONS</span>
+              <span class="item-tag"></span>
+            </a>
+          </li>
+        </ul>
       </nav>
 
       <!-- Bottom Bar -->
-      <div class="bottom-bar">
-        <div class="key-hint"><span class="key">Z</span> SELECT</div>
+      <div class="bottom-bar" role="contentinfo">
+        <div class="key-hint"><span class="key" aria-label="Z key">Z</span> SELECT</div>
         <div class="insert-coin">-- INSERT COIN --</div>
-        <div class="key-hint"><span class="key">X</span> BACK</div>
+        <div class="key-hint"><span class="key" aria-label="X key">X</span> BACK</div>
       </div>
-
     </div>
   </div>
 
-  <script src="js/main.js"></script>
+  <!-- Scripts -->
+  <script src="js/config.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/background.js" defer></script>
+  <script src="js/input.js" defer></script>
+  <script src="js/menu.js" defer></script>
+  <script src="js/main.js" defer></script>
 </body>
 </html>

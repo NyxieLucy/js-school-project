@@ -1,630 +1,215 @@
-/* ══════════════════════════════════════════════════════════════
-   SOUK BRAWL — main.js
-   Unified engine for all screens
-   Handles: Background canvas, animations, screen-specific logic
-══════════════════════════════════════════════════════════════ */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * SOUK BRAWL - Main Entry Point
+ * Initializes the game and sets up global event listeners
+ * ════════════════════════════════════════════════════════════════════════════
+ */
 
-'use strict';
+class SoukBrawl {
+  constructor() {
+    this.version = GameConfig.VERSION;
+    this.isInitialized = false;
 
-/* ════════════════════════════════════════════
-   SPRITE DEFINITIONS
-════════════════════════════════════════════ */
-const ANIMATIONS = {
-  issam: {
-    idle:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: true },
-    walk:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: true },
-    jump:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    crouch: { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    punch:  { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    kick:   { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    special:{ frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    block:  { frames: ['assets/characters/issam/idle.png'], fps: 4, loop: false },
-    win:    { frames: ['assets/characters/issam/idle.png'], fps: 2, loop: false },
-    lose:   { frames: ['assets/characters/issam/idle.png'], fps: 2, loop: false },
-  }
-};
-
-/* ════════════════════════════════════════════
-   SPRITE ANIMATOR CLASS
-════════════════════════════════════════════ */
-class SpriteAnimator {
-  constructor(el, animSet) {
-    this.el       = el;
-    this.animSet  = animSet;
-    this.current  = null;
-    this.frameIdx = 0;
-    this.timer    = null;
-    this.busy     = false;     // true = one-shot anim is playing, NO INTERRUPTIONS
-    this.cooldown = false;     // true = cooldown active, can't attack
+    this.init();
   }
 
-  play(name, onDone) {
-    if (!this.animSet[name]) return;
+  /**
+   * Initialize the game
+   */
+  init() {
+    console.log(`🎮 ${GameConfig.TITLE} v${this.version} - Initializing...`);
 
-    const anim = this.animSet[name];
+    // Load saved settings
+    this.loadSettings();
 
-    // COOLDOWN: if busy playing a one-shot, reject EVERYTHING except we let it finish
-    if (this.busy) {
-      return; // Hard lock - no interruptions allowed
+    // Setup event listeners
+    this.setupEventListeners();
+
+    // Setup performance monitoring
+    this.setupPerformanceMonitoring();
+
+    // Log successful initialization
+    this.isInitialized = true;
+    console.log('✅ Game initialized successfully');
+  }
+
+  /**
+   * Load saved settings from localStorage
+   */
+  loadSettings() {
+    const savedSettings = Utils.Storage.get(GameConfig.STORAGE.SETTINGS);
+
+    if (savedSettings) {
+      Object.assign(GameConfig.AUDIO, savedSettings.audio);
+      Object.assign(GameConfig.GRAPHICS, savedSettings.graphics);
+      Utils.Debug.log('Loaded saved settings:', savedSettings);
+    } else {
+      Utils.Debug.log('Using default settings');
     }
+  }
 
-    // If same loop animation already playing, don't restart
-    if (this.current === name && anim.loop) return;
-
-    clearInterval(this.timer);
-    this.current = name;
-    this.frameIdx = 0;
-    this.busy = !anim.loop; // One-shot = busy, loop = not busy
-
-    const delay = Math.round(1000 / anim.fps);
-    const totalDuration = anim.frames.length * delay;
-
-    const tick = () => {
-      if (!this.el) return;
-      this.el.src = anim.frames[this.frameIdx];
-
-      if (this.frameIdx < anim.frames.length - 1) {
-        this.frameIdx++;
-      } else {
-        if (anim.loop) {
-          this.frameIdx = 0;
-        } else {
-          clearInterval(this.timer);
-          this.timer = null;
-          // Keep busy=true during cooldown, then release
-          setTimeout(() => {
-            this.busy = false;
-            this.cooldown = false;
-            if (onDone) onDone();
-          }, 200); // 200ms cooldown after anim ends
-        }
-      }
+  /**
+   * Save current settings to localStorage
+   */
+  saveSettings() {
+    const settings = {
+      audio: GameConfig.AUDIO,
+      graphics: GameConfig.GRAPHICS,
     };
 
-    tick();
-    this.timer = setInterval(tick, delay);
+    Utils.Storage.set(GameConfig.STORAGE.SETTINGS, settings);
+    Utils.Debug.log('Settings saved');
   }
 
-  isBusy() {
-    return this.busy;
+  /**
+   * Setup global event listeners
+   */
+  setupEventListeners() {
+    // Handle window resize
+    window.addEventListener('resize', this.onWindowResize.bind(this));
+
+    // Handle visibility change
+    document.addEventListener('visibilitychange', this.onVisibilityChange.bind(this));
+
+    // Handle before unload (save settings on exit)
+    window.addEventListener('beforeunload', () => {
+      this.saveSettings();
+    });
+
+    // Listen for custom events
+    Utils.Event.on('menu:selected', (event) => {
+      Utils.Debug.log('Menu item selected:', event.detail.action);
+    });
+
+    Utils.Event.on('menu:back', () => {
+      Utils.Debug.log('Back action triggered');
+    });
+
+    // Handle gamepad connection
+    Utils.Event.on('input:gamepad-connected', (event) => {
+      console.log('🎮 Gamepad connected:', event.detail.gamepad.id);
+    });
+
+    Utils.Event.on('input:gamepad-disconnected', () => {
+      console.log('🎮 Gamepad disconnected');
+    });
   }
 
-  stop() {
-    clearInterval(this.timer);
-    this.timer = null;
-    this.busy = false;
-    this.cooldown = false;
+  /**
+   * Handle window resize
+   */
+  onWindowResize() {
+    GameConfig.CANVAS.WIDTH = window.innerWidth;
+    GameConfig.CANVAS.HEIGHT = window.innerHeight;
+    Utils.Debug.log('Window resized:', GameConfig.CANVAS);
   }
 
-  destroy() {
-    this.stop();
-    this.el      = null;
-    this.animSet = null;
-  }
-}
-
-/* Registry */
-const animators = {};
-
-function stopAllAnimators() {
-  Object.values(animators).forEach(a => a.destroy());
-  for (const k in animators) delete animators[k];
-}
-
-/* ════════════════════════════════════════════
-   ARCADE LADDER DATA
-════════════════════════════════════════════ */
-const ARCADE_ROUNDS = [
-  { num: 1, left: 'EL GUERRAB', right: 'RIFIYA',    loc: 'DJEMAA EL-FNA',   boss: false },
-  { num: 2, left: 'TAROUDANT',  right: 'BELHSEN',   loc: 'MEDINA OF FES',   boss: false },
-  { num: 3, left: 'IBN B.',     right: 'EL GUERRAB', loc: 'KASBAH TANGIER', boss: false },
-  { num: 4, left: 'LALLA Z.',   right: 'BELHSEN',   loc: 'AGADIR BEACH',    boss: false },
-  { num: 5, left: 'RIFIYA',     right: 'IBN B.',    loc: 'CHEFCHAOUEN',     boss: false },
-  { num: 6, left: 'TAROUDANT',  right: 'LALLA Z.',  loc: 'ATLAS MOUNTAINS', boss: false },
-  { num: 7, left: 'ISSAM',      right: 'EL GUERRAB', loc: 'HASSAN II TOWER', boss: false },
-  { num: 8, left: 'AL CAID',    right: '???',       loc: 'THRONE ROOM',     boss: true  },
-];
-
-/* ════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════ */
-const state = {
-  selectedDiff:  'normal',
-  activeRound:   0,
-  credits:       3,
-  menuIndex:     0,
-  p1Ready:       false,
-  p2Ready:       false,
-  currentStage:  'djemaa',
-};
-
-/* ════════════════════════════════════════════
-   ANIMATED BG CANVAS — scrolling zellige tiles
-════════════════════════════════════════════ */
-function initBgCanvas() {
-  const canvas = document.getElementById('bg-canvas');
-  if (!canvas) return;
-  const ctx  = canvas.getContext('2d');
-  let W, H, offset = 0;
-
-  const TILE   = 40;
-  const COLORS = ['#1A0800','#120600','#0F0500','#160900'];
-  const ACCENT = '#2E1A06';
-
-  function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    const cols = Math.ceil(W / TILE) + 2;
-    const rows = Math.ceil(H / TILE) + 2;
-    const ox   = -(offset % TILE);
-
-    for (let r = -1; r < rows; r++) {
-      for (let c = -1; c < cols; c++) {
-        const x  = c * TILE + ox;
-        const y  = r * TILE;
-        const ci = Math.abs((r + c) % COLORS.length);
-        ctx.fillStyle = COLORS[ci];
-        ctx.fillRect(x, y, TILE - 1, TILE - 1);
-        ctx.strokeStyle = ACCENT;
-        ctx.lineWidth   = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x, y);            ctx.lineTo(x + TILE - 1, y + TILE - 1);
-        ctx.moveTo(x + TILE - 1, y); ctx.lineTo(x, y + TILE - 1);
-        ctx.stroke();
-        if ((r + c) % 3 === 0) {
-          ctx.fillStyle = '#3A2208';
-          ctx.fillRect(x + TILE / 2 - 2, y + TILE / 2 - 2, 4, 4);
-        }
-      }
-    }
-
-    offset += 0.4;
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  window.addEventListener('resize', resize);
-  draw();
-}
-
-/* ════════════════════════════════════════════
-   MAIN MENU ANIMATIONS
-════════════════════════════════════════════ */
-function initMainAnimations() {
-  const heroImg = document.getElementById('hero-sprite-img');
-  if (!heroImg) return;
-
-  animators.hero = new SpriteAnimator(heroImg, ANIMATIONS.issam);
-  animators.hero.play('idle');
-
-  /* periodic tease: walk a bit, throw a punch, back to idle */
-  function tease() {
-    setTimeout(() => {
-      if (!animators.hero || !animators.hero.el) return;
-      animators.hero.play('walk');
-      setTimeout(() => {
-        if (!animators.hero || !animators.hero.el) return;
-        animators.hero.play('punch', () => {
-          if (!animators.hero || !animators.hero.el) return;
-          animators.hero.play('idle');
-          tease();
-        });
-      }, 1400);
-    }, 4000 + Math.random() * 3000);
-  }
-
-  tease();
-}
-
-/* ════════════════════════════════════════════
-   ARCADE HERO PANEL UPDATE
-════════════════════════════════════════════ */
-function updateArcadeHero() {
-  const img = document.getElementById('arcade-hero-img');
-  if (img && animators.arcadeHero) {
-    animators.arcadeHero.play('idle');
-  }
-}
-
-/* ════════════════════════════════════════════
-   VS MODE PANEL UPDATES
-════════════════════════════════════════════ */
-function updateVsPanel(player, ready) {
-  const overlay = document.querySelector(player === 'p1' ? '.p1-overlay' : '.p2-overlay');
-  if (overlay) overlay.classList.toggle('hidden', ready);
-}
-
-/* ════════════════════════════════════════════
-   ARCADE LADDER RENDERER
-════════════════════════════════════════════ */
-function renderArcadeLadder() {
-  const list = document.getElementById('rounds-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  ARCADE_ROUNDS.forEach((round, i) => {
-    const isActive = i === state.activeRound;
-    const isWon    = i <  state.activeRound;
-    const isLocked = i >  state.activeRound;
-    const wrap     = document.createElement('div');
-    wrap.className = 'round-row-wrap';
-
-    if (round.boss) {
-      wrap.innerHTML = `
-        <div class="round-label">FINAL BOSS</div>
-        <div class="round-row final ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}">
-          <div class="round-fighter boss">
-            <div class="rf-name">${round.left}</div>
-            <div class="rf-loc">${round.loc}</div>
-          </div>
-        </div>`;
+  /**
+   * Handle visibility change
+   */
+  onVisibilityChange() {
+    if (document.hidden) {
+      console.log('⏸️  Game paused (window hidden)');
+      this.saveSettings();
     } else {
-      wrap.innerHTML = `
-        <div class="round-label">ROUND ${round.num} &mdash; ${round.loc}</div>
-        <div class="round-row ${isActive ? 'active' : ''} ${isWon ? 'won' : ''} ${isLocked ? 'locked' : ''}">
-          <div class="round-fighter ${isWon ? 'won' : ''}">
-            <div class="rf-name">${round.left}</div>
-          </div>
-          <div class="round-node"><div class="node-pip"></div></div>
-          <div class="round-fighter right ${isWon ? 'won' : ''}">
-            <div class="rf-name">${round.right}</div>
-          </div>
-        </div>`;
+      console.log('▶️  Game resumed');
     }
-    list.appendChild(wrap);
-  });
-}
-
-/* ════════════════════════════════════════════
-   STAGE CAROUSEL (VS Mode)
-════════════════════════════════════════════ */
-function initStageCarousel() {
-  const thumbs = document.querySelectorAll('.stage-thumb');
-  const stageName = document.getElementById('stage-name');
-  const stageAr = document.getElementById('stage-ar');
-  const prevBtn = document.getElementById('stage-prev');
-  const nextBtn = document.getElementById('stage-next');
-
-  if (!thumbs.length) return;
-
-  let currentIdx = 0;
-  const stages = [...thumbs];
-
-  function updateStage(idx) {
-    stages.forEach((t, i) => t.classList.toggle('active', i === idx));
-    const active = stages[idx];
-    if (stageName) stageName.textContent = active.querySelector('.thumb-frame').textContent;
-    if (stageAr) stageAr.textContent = active.dataset.ar || '';
-    state.currentStage = active.dataset.stage;
-    currentIdx = idx;
   }
 
-  thumbs.forEach((thumb, idx) => {
-    thumb.addEventListener('click', () => updateStage(idx));
-  });
+  /**
+   * Setup performance monitoring
+   */
+  setupPerformanceMonitoring() {
+    if (!GameConfig.DEBUG) return;
 
-  if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
-      updateStage((currentIdx - 1 + stages.length) % stages.length);
-    });
+    const stats = {
+      fps: 0,
+      lastTime: performance.now(),
+      frames: 0,
+    };
+
+    setInterval(() => {
+      const now = performance.now();
+      const delta = now - stats.lastTime;
+      stats.fps = Math.round(1000 / (delta / stats.frames));
+      console.log(`📊 FPS: ${stats.fps}`);
+      stats.frames = 0;
+      stats.lastTime = now;
+    }, 1000);
+
+    // Count frames
+    setInterval(() => {
+      stats.frames++;
+    }, 16); // ~60 FPS
   }
 
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      updateStage((currentIdx + 1) % stages.length);
-    });
+  /**
+   * Accessibility: Announce screen reader messages
+   */
+  announce(message) {
+    const announcer = document.createElement('div');
+    announcer.setAttribute('role', 'status');
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.className = 'sr-only';
+    announcer.textContent = message;
+
+    document.body.appendChild(announcer);
+
+    setTimeout(() => {
+      announcer.remove();
+    }, 1000);
   }
-}
 
-/* ════════════════════════════════════════════
-   VS MODE — Player Ready System
-════════════════════════════════════════════ */
-function initVsMode() {
-  const p1Panel = document.getElementById('p1-panel');
-  const p2Panel = document.getElementById('p2-panel');
-
-  if (!p1Panel || !p2Panel) return;
-
-  const p1Overlay = p1Panel.querySelector('.p1-overlay');
-  const p2Overlay = p2Panel.querySelector('.p2-overlay');
-
-  // Click to toggle ready state
-  p1Panel.addEventListener('click', () => {
-    state.p1Ready = !state.p1Ready;
-    if (p1Overlay) p1Overlay.classList.toggle('hidden', state.p1Ready);
-    if (state.p1Ready && animators.p1) animators.p1.play('win');
-  });
-
-  p2Panel.addEventListener('click', () => {
-    state.p2Ready = !state.p2Ready;
-    if (p2Overlay) p2Overlay.classList.toggle('hidden', state.p2Ready);
-    if (state.p2Ready && animators.p2) animators.p2.play('win');
-  });
-
-  // Animate both sprites
-  const p1Img = document.getElementById('p1-sprite');
-  const p2Img = document.getElementById('p2-sprite');
-
-  if (p1Img) {
-    animators.p1 = new SpriteAnimator(p1Img, ANIMATIONS.issam);
-    animators.p1.play('idle');
+  /**
+   * Get game state
+   */
+  getGameState() {
+    return {
+      version: this.version,
+      isInitialized: this.isInitialized,
+      settings: {
+        audio: GameConfig.AUDIO,
+        graphics: GameConfig.GRAPHICS,
+      },
+    };
   }
-  if (p2Img) {
-    animators.p2 = new SpriteAnimator(p2Img, ANIMATIONS.issam);
-    animators.p2.play('idle');
-  }
-}
 
-/* ════════════════════════════════════════════
-   CHAPTER SELECT (Story Mode)
-════════════════════════════════════════════ */
-function initStoryMode() {
-  const cards = document.querySelectorAll('.chapter-card');
-  if (!cards.length) return;
-
-  cards.forEach(card => {
-    card.addEventListener('click', () => {
-      if (card.classList.contains('locked')) return;
-      cards.forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-
-      // Update hero banner
-      const chapter = card.dataset.chapter;
-      const title = card.querySelector('.ch-title').textContent;
-      const ar = card.querySelector('.ch-ar').textContent;
-      const loc = card.querySelector('.ch-loc').textContent;
-
-      const bannerTitle = document.querySelector('.sh-title');
-      const bannerAr = document.querySelector('.sh-title-ar');
-      const bannerCh = document.querySelector('.sh-chapter');
-
-      if (bannerTitle) bannerTitle.textContent = title;
-      if (bannerAr) bannerAr.textContent = ar;
-      if (bannerCh) bannerCh.textContent = 'CHAPTER ' + chapter;
-    });
-  });
-}
-
-/* ════════════════════════════════════════════
-   TRAINING MODE — Settings toggles
-════════════════════════════════════════════ */
-function initTrainingMode() {
-  const settingRows = document.querySelectorAll('.setting-options');
-
-  settingRows.forEach(row => {
-    const buttons = row.querySelectorAll('.set-btn');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Update move display for dummy action
-        const rowName = btn.closest('.setting-row').querySelector('.setting-name').textContent;
-        if (rowName === 'Dummy Action') {
-          const moveDisplay = document.getElementById('move-display');
-          if (moveDisplay) moveDisplay.textContent = btn.textContent;
-        }
-      });
-    });
-  });
-
-  // Animate training hero
-  const trImg = document.getElementById('tr-hero-img');
-  if (trImg) {
-    animators.training = new SpriteAnimator(trImg, ANIMATIONS.issam);
-    animators.training.play('idle');
-  }
-}
-
-/* ════════════════════════════════════════════
-   OPTIONS SCREEN — Toggles & Sliders
-════════════════════════════════════════════ */
-function initOptionsScreen() {
-  // Button toggles
-  document.querySelectorAll('.opt-value').forEach(group => {
-    const buttons = group.querySelectorAll('.opt-btn');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    });
-  });
-
-  // Sliders
-  document.querySelectorAll('.opt-slider input[type="range"]').forEach(slider => {
-    const valDisplay = slider.parentElement.querySelector('.slider-val');
-    slider.addEventListener('input', () => {
-      if (valDisplay) valDisplay.textContent = slider.value + '%';
-    });
-  });
-
-  // Reset button
-  const resetBtn = document.querySelector('.opt-reset');
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      document.querySelectorAll('.opt-btn').forEach((btn, idx) => {
-        // Simple reset logic — in production you'd restore defaults properly
-        if (idx === 0) btn.classList.add('active');
-      });
-      document.querySelectorAll('input[type="range"]').forEach(s => {
-        s.value = 80;
-        const disp = s.parentElement.querySelector('.slider-val');
-        if (disp) disp.textContent = '80%';
-      });
-    });
-  }
-}
-
-/* ════════════════════════════════════════════
-   SURVIVAL MODE — Stats animation
-════════════════════════════════════════════ */
-function initSurvivalMode() {
-  const heroImg = document.getElementById('sv-hero-img');
-  if (heroImg) {
-    animators.survival = new SpriteAnimator(heroImg, ANIMATIONS.issam);
-    animators.survival.play('idle');
-  }
-}
-
-/* ════════════════════════════════════════════
-   MAIN MENU KEYBOARD NAV
-════════════════════════════════════════════ */
-const menuItems = () => [...document.querySelectorAll('#main-menu .menu-item')];
-
-function highlightMenu(idx) {
-  menuItems().forEach((el, i) => el.classList.toggle('active', i === idx));
-  state.menuIndex = idx;
-}
-
-function initMainMenuNav() {
-  const menu = document.getElementById('main-menu');
-  if (!menu) return;
-
-  document.addEventListener('keydown', e => {
-    const items = menuItems();
-    if (e.key === 'ArrowUp'   || e.key === 'w') {
-      e.preventDefault();
-      highlightMenu((state.menuIndex - 1 + items.length) % items.length);
+  /**
+   * Reset to defaults
+   */
+  resetToDefaults() {
+    if (confirm('Are you sure you want to reset all settings to default?')) {
+      Utils.Storage.remove(GameConfig.STORAGE.SETTINGS);
+      location.reload();
     }
-    if (e.key === 'ArrowDown' || e.key === 's') {
-      e.preventDefault();
-      highlightMenu((state.menuIndex + 1) % items.length);
-    }
-    if (e.key === 'z' || e.key === 'Z' || e.key === 'Enter') {
-      const active = items[state.menuIndex];
-      if (active) window.location.href = active.getAttribute('href');
-    }
+  }
+}
+
+// Initialize game when DOM is ready
+let game = null;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    game = new SoukBrawl();
+    window.game = game;
   });
-
-  // Mouse hover
-  menuItems().forEach((btn, i) => {
-    btn.addEventListener('mouseenter', () => highlightMenu(i));
-  });
+} else {
+  game = new SoukBrawl();
+  window.game = game;
 }
 
-/* ════════════════════════════════════════════
-   DIFFICULTY BUTTONS (Arcade)
-════════════════════════════════════════════ */
-function initDifficultyButtons() {
-  document.querySelectorAll('.diff-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.selectedDiff = btn.dataset.diff;
-    });
-  });
-}
+/**
+ * Global error handler
+ */
+window.addEventListener('error', (event) => {
+  console.error('❌ Global error:', event.error);
+  Utils.Event.emit('game:error', { error: event.error });
+});
 
-/* ════════════════════════════════════════════
-   START BUTTONS
-════════════════════════════════════════════ */
-function initStartButtons() {
-  // Arcade start
-  const arcadeStart = document.getElementById('start-arcade');
-  if (arcadeStart) {
-    arcadeStart.addEventListener('click', () => {
-      window.location.href = 'fight.html?mode=arcade&diff=' + state.selectedDiff;
-    });
-  }
-
-  // VS start
-  const vsStart = document.getElementById('start-fight');
-  if (vsStart) {
-    vsStart.addEventListener('click', () => {
-      if (!state.p1Ready || !state.p2Ready) {
-        alert('Both players must press START!');
-        return;
-      }
-      window.location.href = 'fight.html?mode=versus&stage=' + state.currentStage;
-    });
-  }
-
-  // Story start
-  const storyStart = document.getElementById('start-story');
-  if (storyStart) {
-    storyStart.addEventListener('click', () => {
-      const activeChapter = document.querySelector('.chapter-card.active');
-      const chapter = activeChapter?.dataset.chapter || '1';
-      window.location.href = 'fight.html?mode=story&chapter=' + chapter;
-    });
-  }
-
-  // Survival start
-  const survivalStart = document.getElementById('start-survival');
-  if (survivalStart) {
-    survivalStart.addEventListener('click', () => {
-      window.location.href = 'fight.html?mode=survival';
-    });
-  }
-
-  // Training start
-  const trainingStart = document.getElementById('start-training');
-  if (trainingStart) {
-    trainingStart.addEventListener('click', () => {
-      window.location.href = 'fight.html?mode=training';
-    });
-  }
-}
-
-/* ════════════════════════════════════════════
-   SCREEN DETECTION & INITIALIZATION
-════════════════════════════════════════════ */
-function detectScreen() {
-  const path = window.location.pathname;
-  if (path.includes('arcade')) return 'arcade';
-  if (path.includes('versus')) return 'versus';
-  if (path.includes('story')) return 'story';
-  if (path.includes('survival')) return 'survival';
-  if (path.includes('training')) return 'training';
-  if (path.includes('options')) return 'options';
-  return 'main';
-}
-
-function initScreen(screen) {
-  switch(screen) {
-    case 'main':
-      initMainAnimations();
-      initMainMenuNav();
-      break;
-    case 'arcade':
-      renderArcadeLadder();
-      initDifficultyButtons();
-      initArcadeAnimations();
-      break;
-    case 'versus':
-      initVsMode();
-      initStageCarousel();
-      break;
-    case 'story':
-      initStoryMode();
-      initStoryAnimations();
-      break;
-    case 'survival':
-      initSurvivalMode();
-      initSurvivalAnimations();
-      break;
-    case 'training':
-      initTrainingMode();
-      initTrainingAnimations();
-      break;
-    case 'options':
-      initOptionsScreen();
-      break;
-  }
-}
-
-/* ════════════════════════════════════════════
-   GLOBAL INIT
-════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  initBgCanvas();
-  initStartButtons();
-
-  const screen = detectScreen();
-  initScreen(screen);
+/**
+ * Handle unhandled promise rejections
+ */
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('❌ Unhandled promise rejection:', event.reason);
+  event.preventDefault();
 });
