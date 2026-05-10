@@ -135,3 +135,66 @@ body::after {
   animation: blink 1.2s infinite;
   color: #f7b801;
 }
+/* Make the footer buttons huge and aggressive */
+.versus-footer {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  z-index: 30;
+}
+
+.start-btn {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 2rem; /* Triple the size! */
+  padding: 20px 60px;
+  background: #ff6b35;
+  color: #fff;
+  border: 6px solid #fff;
+  cursor: pointer;
+  box-shadow: 8px 8px 0 #000, 0 0 30px rgba(255, 107, 53, 0.6);
+  transition: all 0.1s active;
+}
+
+.start-btn:hover {
+  background: #00d9ff;
+  border-color: #fff;
+  transform: scale(1.05);
+}
+
+.start-btn:active {
+  transform: translateY(4px);
+  box-shadow: 4px 4px 0 #000;
+}
+
+.start-sub {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  opacity: 0.8;
+}
+.versus-footer {
+  position: absolute;
+  bottom: 50px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+}
+
+.start-btn {
+  padding: 30px 80px; /* Massive buttons */
+  font-size: 2.5rem;
+  background: #ff6b35;
+  border: 8px solid #fff;
+  color: #fff;
+  font-family: 'Press Start 2P';
+  cursor: pointer;
+  text-shadow: 4px 4px 0 #000;
+  box-shadow: 10px 10px 0 #000, 0 0 40px rgba(255, 107, 53, 0.5);
+}
+
+.start-btn:hover {
+  background: #00d9ff;
+  transform: scale(1.1) rotate(-2deg);
+}

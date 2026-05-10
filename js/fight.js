@@ -1,14 +1,15 @@
 // ═══════════════════════════════════════════════════════════
 //  SOUK BRAWL — fight.js
 //  Full fight engine: input, physics, hitboxes, AI, rounds
+//  Aligned with: character.js (ROSTER, FightConfig, getSpriteWithFallback)
 // ═══════════════════════════════════════════════════════════
 
 'use strict';
 
 // ─── Constants ───────────────────────────────────────────────
-const STAGE_W   = 900;   // logical canvas width
-const STAGE_H   = 420;   // logical canvas height
-const GROUND_Y  = 340;   // y position of the ground (fighter feet)
+const STAGE_W   = 900;
+const STAGE_H   = 420;
+const GROUND_Y  = 340;
 const GRAVITY   = 0.65;
 const JUMP_VY   = -14;
 const WALL_L    = 40;
@@ -16,20 +17,19 @@ const WALL_R    = STAGE_W - 40;
 
 const HP_MAX    = 100;
 const SUPER_MAX = 100;
-const SUPER_PER_HIT = 8;   // super gained when landing a hit
-const SUPER_PER_RECV = 4;  // super gained when taking a hit (guts)
-const BLOCK_CHIP = 0.15;   // blocked hits deal 15% chip damage
+const SUPER_PER_HIT = 8;
+const SUPER_PER_RECV = 4;
+const BLOCK_CHIP = 0.15;
 
-const ROUND_START_DELAY = 2000; // ms before "FIGHT!" fades
+const ROUND_START_DELAY = 2000;
 const KO_DISPLAY_TIME   = 2500;
 const BETWEEN_ROUND     = 3000;
 
-// AI reaction budgets per difficulty (frames to decide)
 const AI_REACT = { easy: 45, normal: 28, hard: 14, legend: 6 };
 const AI_AGGRESSION = { easy: 0.3, normal: 0.55, hard: 0.75, legend: 0.92 };
 
 // ─── Game State ──────────────────────────────────────────────
-let gameState = 'intro'; // intro | fighting | paused | round_end | game_end
+let gameState = 'intro';
 let currentRound = 1;
 let totalRounds  = 3;
 let countdown    = 60;
@@ -37,36 +37,35 @@ let timerInterval = null;
 let animFrameId   = null;
 let frameCount    = 0;
 
-// ─── Hit Stop / Screen Shake State ───────────────────────────
-let isHitStop = false;
+// ─── Hit Stop / Screen Shake ────────────────────────────────
 let hitStopFrames = 0;
 let shakeFrames = 0;
 let shakeMag = 0;
 
-// ─── Input System ──────────────────────────────────────────
+// ─── Input System (self-contained, matches input.js API) ─────
 class InputSystem {
   constructor() {
     this.keys = {};
     this.prevKeys = {};
 
     document.addEventListener('keydown', e => {
-      this.keys[e.key] = true;
+      this.keys[e.key.toLowerCase()] = true;
       if (e.key === 'Escape') togglePause();
-      // Prevent arrow keys scrolling page
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+      if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
     });
 
     document.addEventListener('keyup', e => {
-      this.keys[e.key] = false;
+      this.keys[e.key.toLowerCase()] = false;
     });
   }
 
   isKeyPressed(key) {
-    return !!this.keys[key];
+    return !!this.keys[key.toLowerCase()];
   }
 
   isKeyJustPressed(key) {
-    return !!this.keys[key] && !this.prevKeys[key];
+    const k = key.toLowerCase();
+    return !!this.keys[k] && !this.prevKeys[k];
   }
 
   update() {
@@ -74,100 +73,64 @@ class InputSystem {
   }
 }
 
-// ─── Key Bindings ─────────────────────────────────────────────
+// ─── Key Bindings (lowercase to match input.js convention) ────
 const GameConfig = {
   KEYS: {
-    LEFT:  'ArrowLeft',
-    RIGHT: 'ArrowRight',
-    UP:    'ArrowUp',
-    DOWN:  'ArrowDown',
-    SELECT: 'z',  // Punch
-    BACK:   'x',  // Kick
-    BLOCK:  'c',  // Block
-    SPECIAL:'v'   // Special
+    LEFT:    'arrowleft',
+    RIGHT:   'arrowright',
+    UP:      'arrowup',
+    DOWN:    'arrowdown',
+    SELECT:  'z',
+    BACK:    'x',
+    BLOCK:   'c',
+    SPECIAL: 'v'
   }
 };
 
-// ─── Sprite Fallback Helper ──────────────────────────────────
-function getSpriteWithFallback(charId, stateName) {
-  // Default fallback — assumes assets folder structure
-  return `assets/characters/${charId}/${stateName}.png`;
-}
-
-// ─── Fight Config (default + localStorage loader) ────────────
-const FightConfig = {
-  defaults: {
-    mode: 'arcade',
-    difficulty: 'normal',
-    rounds: 3,
-    timer: 60,
-    p1CharId: 'issam',
-    p2CharId: 'issam',
-    stage: 'djemaa'
-  },
-
-  load() {
-    try {
-      const saved = localStorage.getItem('soukBrawlConfig');
-      return saved ? JSON.parse(saved) : {};
-    } catch(e) {
-      return {};
-    }
-  }
-};
-
-// ─── Fighter Class (Unified) ─────────────────────────────────
+// ─── Fighter Class ───────────────────────────────────────────
 class Fighter {
   constructor(wrapId, imgId, charData, startX, isFacingLeft, isAI = false) {
-    // DOM references
     this.wrapEl  = document.getElementById(wrapId);
     this.imgEl   = document.getElementById(imgId);
 
-    // Character data
     this.charData = charData;
     this.id = charData.id;
     this.isAI = isAI;
     this.side = isFacingLeft ? 'right' : 'left';
 
-    // Position & physics
     this.x = startX;
     this.y = GROUND_Y;
     this.vx = 0;
     this.vy = 0;
-    this.facing = isFacingLeft ? -1 : 1; // 1=right, -1=left
+    this.facing = isFacingLeft ? -1 : 1;
     this.facingLeft = isFacingLeft;
 
-    // Stats derived from charData
     const spd = this.charData.stats?.speed || 5;
     const def = this.charData.stats?.defense || 5;
-    this.walkSpeed   = 2.5 + spd * 0.35;
-    this.defMult     = 1 - (def - 1) * 0.03;
+    this.walkSpeed = 2.5 + spd * 0.35;
+    this.defMult = 1 - (def - 1) * 0.03;
 
-    // Combat state
-    this.hp         = HP_MAX;
+    this.hp = HP_MAX;
     this.superMeter = 0;
-    this.wins       = 0;
-    this.state      = 'idle'; // idle|walk|jump|punch|kick|block|special|hurt|ko
+    this.wins = 0;
+    this.state = 'idle';
     this.actionFrame = 0;
-    this.hitstun    = 0;
-    this.blockstun  = 0;
+    this.hitstun = 0;
+    this.blockstun = 0;
     this.comboCount = 0;
     this.comboTimer = 0;
     this.isBlocking = false;
-    this.onGround   = true;
+    this.onGround = true;
     this.lastHitFrame = -999;
 
-    // Attack tracking
     this._attackActiveStart = 0;
-    this._attackActiveEnd   = 0;
-    this._attackType        = null;
-    this._hitLanded         = false;
+    this._attackActiveEnd = 0;
+    this._attackType = null;
+    this._hitLanded = false;
 
-    // AI state
-    this.aiReactTimer  = 0;
-    this.aiDecision    = null;
+    this.aiReactTimer = 0;
+    this.aiDecision = null;
 
-    // HUD references (optional, will bind on init)
     this.hpEl = null;
     this.superEl = null;
     this.comboWrapEl = null;
@@ -178,13 +141,12 @@ class Fighter {
 
   bindHUD(side) {
     const suffix = side === 'left' ? 'p1' : 'p2';
-    this.hpEl    = document.getElementById(`health-${suffix}`);
+    this.hpEl = document.getElementById(`health-${suffix}`);
     this.superEl = document.getElementById(`super-${suffix}`);
     this.comboWrapEl = document.getElementById(`combo-${suffix}`);
     this.comboCountEl = document.getElementById(`combo-count-${suffix}`);
   }
 
-  // ── Sprite helpers ──
   _loadSprite(stateName) {
     if (!this.imgEl) return;
     const src = getSpriteWithFallback(this.id, stateName);
@@ -199,20 +161,14 @@ class Fighter {
     };
     this._loadSprite(map[this.state] || 'idle');
 
-    // Flip sprite based on facing direction
     if (this.wrapEl) {
       const base = this.side === 'right' ? -1 : 1;
       const flip = base * this.facing;
-      this.wrapEl.style.transform = flip < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-    }
-
-    // Position the element in the stage using translateX
-    if (this.wrapEl) {
-      this.wrapEl.style.transform += ` translateX(${this.x}px)`;
+      const scaleX = flip < 0 ? -1 : 1;
+      this.wrapEl.style.transform = `translateX(${this.x}px) scaleX(${scaleX})`;
     }
   }
 
-  // ── HUD sync ──
   syncHUD() {
     if (this.hpEl) {
       const pct = Math.max(0, (this.hp / HP_MAX) * 100);
@@ -224,7 +180,6 @@ class Fighter {
     }
   }
 
-  // ── Hitboxes ──
   get hitboxX() { return this.x - 55; }
   get hitboxW() { return 110; }
   get hitboxY() { return this.y - 220; }
@@ -234,7 +189,7 @@ class Fighter {
     const reach = 80;
     const bx = this.facing > 0 ? this.x + 20 : this.x - 20 - reach;
     const height = moveType === 'kick' ? 100 : 150;
-    const yOff   = moveType === 'kick' ? 60 : 20;
+    const yOff = moveType === 'kick' ? 60 : 20;
     return { x: bx, y: this.y - height - yOff, w: reach, h: height };
   }
 
@@ -269,7 +224,6 @@ class Fighter {
     return dmgRaw;
   }
 
-  // ── Frame update ──
   update(opponent, inputSys, isPlayer1) {
     frameCount++;
     if (this.state === 'ko') {
@@ -277,7 +231,6 @@ class Fighter {
       return;
     }
 
-    // ── Timers ──
     if (this.actionFrame > 0) this.actionFrame--;
     if (this.comboTimer > 0) {
       this.comboTimer--;
@@ -286,25 +239,21 @@ class Fighter {
       if (this.comboWrapEl) this.comboWrapEl.classList.remove('active');
     }
 
-    // ── Auto-face opponent ──
     if (this.state === 'idle' || this.state === 'walk') {
       this.facing = opponent.x > this.x ? 1 : -1;
       this.facingLeft = this.facing === -1;
     }
 
-    // ── Movement / action input ──
     if (this.isAI) {
       this._doAI(opponent);
     } else {
       this._doInput(inputSys, isPlayer1);
     }
 
-    // ── Physics ──
     this.x += this.vx;
     this.y += this.vy;
     this.vy += GRAVITY;
 
-    // Ground collision
     if (this.y >= GROUND_Y) {
       this.y = GROUND_Y;
       this.vy = 0;
@@ -319,20 +268,16 @@ class Fighter {
       this.onGround = false;
     }
 
-    // Wall clamp
     if (this.x < WALL_L) { this.x = WALL_L; this.vx = 0; }
     if (this.x > WALL_R) { this.x = WALL_R; this.vx = 0; }
 
-    // Push apart if overlapping
     if (Math.abs(this.x - opponent.x) < 80 && this.onGround && opponent.onGround) {
       const push = this.x < opponent.x ? -1.5 : 1.5;
       this.x += push;
     }
 
-    // Velocity friction
     this.vx *= 0.82;
 
-    // ── Idle fallback ──
     if (this.actionFrame <= 0 && this.state !== 'idle' &&
         this.state !== 'walk' && this.state !== 'jump' && this.state !== 'ko') {
       this.state = 'idle';
@@ -342,17 +287,12 @@ class Fighter {
     this.syncHUD();
   }
 
-  // ── Input handling ──
   _doInput(inputSys, isPlayer1) {
-    // If locked in hurt/block animation, can't act
     if (this.actionFrame > 0 && (this.state === 'hurt' || this.state === 'block')) return;
-
-    // If attacking and still in animation, can't act
     if (this.actionFrame > 0 && ['punch','kick','special'].includes(this.state)) return;
 
     const K = GameConfig.KEYS;
 
-    // Block (hold)
     this.isBlocking = inputSys.isKeyPressed(K.BLOCK) && this.onGround;
     if (this.isBlocking) {
       this.state = 'block';
@@ -361,26 +301,14 @@ class Fighter {
       return;
     }
 
-    // Special (super move)
     if (inputSys.isKeyPressed(K.SPECIAL) && this.superMeter >= SUPER_MAX) {
       this._doAttack('special');
       this.superMeter = 0;
       return;
     }
+    if (inputSys.isKeyPressed(K.BACK))  { this._doAttack('kick');  return; }
+    if (inputSys.isKeyPressed(K.SELECT)) { this._doAttack('punch'); return; }
 
-    // Kick
-    if (inputSys.isKeyPressed(K.BACK)) {
-      this._doAttack('kick');
-      return;
-    }
-
-    // Punch
-    if (inputSys.isKeyPressed(K.SELECT)) {
-      this._doAttack('punch');
-      return;
-    }
-
-    // Jump
     if (inputSys.isKeyPressed(K.UP) && this.onGround) {
       this.vy = JUMP_VY;
       this.onGround = false;
@@ -388,16 +316,9 @@ class Fighter {
       this.actionFrame = 30;
     }
 
-    // Walk
     let moving = false;
-    if (inputSys.isKeyPressed(K.LEFT)) {
-      this.vx = -this.walkSpeed;
-      moving = true;
-    }
-    if (inputSys.isKeyPressed(K.RIGHT)) {
-      this.vx = this.walkSpeed;
-      moving = true;
-    }
+    if (inputSys.isKeyPressed(K.LEFT))  { this.vx = -this.walkSpeed; moving = true; }
+    if (inputSys.isKeyPressed(K.RIGHT)) { this.vx =  this.walkSpeed; moving = true; }
 
     if (moving && this.onGround && this.state !== 'jump') {
       this.state = 'walk';
@@ -409,20 +330,18 @@ class Fighter {
   _doAttack(type) {
     const move = this.charData.moves[type];
     if (!move) return;
-
     this.state = type;
     this.actionFrame = move.startup + move.active + move.recovery;
     this._attackActiveStart = move.startup;
-    this._attackActiveEnd   = move.startup + move.active;
-    this._attackType        = type;
-    this._hitLanded         = false;
+    this._attackActiveEnd = move.startup + move.active;
+    this._attackType = type;
+    this._hitLanded = false;
   }
 
-  // ── AI Brain ──
   _doAI(opponent) {
     const diff = window._fightDifficulty || 'normal';
     const reactFrames = AI_REACT[diff] || 28;
-    const aggression  = AI_AGGRESSION[diff] || 0.55;
+    const aggression = AI_AGGRESSION[diff] || 0.55;
 
     this.aiReactTimer++;
     if (this.aiReactTimer < reactFrames) {
@@ -432,7 +351,6 @@ class Fighter {
     this.aiReactTimer = 0;
 
     const dist = Math.abs(this.x - opponent.x);
-    const opHP = opponent.hp / HP_MAX;
     const myHP = this.hp / HP_MAX;
 
     if (this.actionFrame > 0) return;
@@ -477,8 +395,7 @@ class Fighter {
   }
 
   _executeAIDecision(opponent) {
-    if (!this.aiDecision) return;
-    if (this.actionFrame > 0) return;
+    if (!this.aiDecision || this.actionFrame > 0) return;
 
     switch (this.aiDecision.action) {
       case 'approach':
@@ -504,15 +421,14 @@ class Fighter {
     }
   }
 
-  // Hitbox active this frame?
   attackActiveThisFrame() {
     if (!this._attackType) return false;
     const move = this.charData.moves[this._attackType];
     if (!move) return false;
     const totalFrames = move.startup + move.active + move.recovery;
     const elapsed = totalFrames - this.actionFrame;
-    return elapsed >= this._attackActiveStart && 
-           elapsed < this._attackActiveEnd && 
+    return elapsed >= this._attackActiveStart &&
+           elapsed < this._attackActiveEnd &&
            !this._hitLanded;
   }
 }
@@ -525,26 +441,24 @@ const input = new InputSystem();
 const wins = { p1: 0, p2: 0 };
 
 function initFighters() {
+  // Use FightConfig from character.js (sessionStorage, key 'soukbrawl_fight')
   const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
   window._fightDifficulty = cfg.difficulty;
   totalRounds = cfg.rounds || 3;
-  countdown   = cfg.timer  || 60;
+  countdown = cfg.timer || 60;
 
   const isVersus = cfg.mode === 'versus';
 
-  // Grab character data from ROSTER (defined in character.js)
   const p1Data = ROSTER.find(c => c.id === (cfg.p1CharId || 'issam')) || ROSTER[0];
   const p2Data = ROSTER.find(c => c.id === (cfg.p2CharId || 'issam')) || ROSTER[0];
 
-  // Initialize fighters with your hook pattern
+  // Your hook: new Fighter(wrapId, imgId, charData, startX, isFacingLeft, isAI)
   p1 = new Fighter('sprite-p1-wrap', 'sprite-p1', p1Data, 200, false, false);
   p2 = new Fighter('sprite-p2-wrap', 'sprite-p2', p2Data, 700, true, !isVersus);
 
-  // Bind HUD elements
   p1.bindHUD('left');
   p2.bindHUD('right');
 
-  // Update HUD names
   const snEl = document.querySelector('.hud-side.left .hud-name');
   const saEl = document.querySelector('.hud-side.left .hud-name-ar');
   const snEl2 = document.querySelector('.hud-side.right .hud-name');
@@ -563,7 +477,6 @@ function startRound() {
   gameState = 'intro';
   clearTimer();
 
-  // Reset fighter positions & HP
   p1.x = 200; p1.y = GROUND_Y; p1.vx = 0; p1.vy = 0;
   p1.hp = HP_MAX; p1.state = 'idle'; p1.actionFrame = 0;
   p1.hitstun = 0; p1.blockstun = 0; p1.comboCount = 0;
@@ -576,7 +489,6 @@ function startRound() {
 
   p1.syncHUD(); p2.syncHUD();
 
-  // Round indicator
   const roundEl = document.getElementById('round-indicator');
   const roundNames = ['الجولة الأولى','الجولة الثانية','الجولة الثالثة','الجولة الرابعة','الجولة الخامسة'];
   if (roundEl) {
@@ -640,16 +552,10 @@ function checkHits() {
       const moveData = attacker.charData.moves[attacker._attackType];
       const dmg = defender.receiveHit(moveData);
 
-      // Hit stop effect
-      isHitStop = true;
       hitStopFrames = 4;
-
-      // Screen shake
-      const shakeAmount = moveData.damage > 15 ? 10 : 5;
-      screenShake(shakeAmount);
+      screenShake(moveData.damage > 15 ? 10 : 5);
       if (stageEl) applyShake(stageEl);
 
-      // Combo counter
       attacker.comboCount++;
       attacker.comboTimer = 60;
       if (attacker.comboWrapEl && attacker.comboCountEl) {
@@ -657,11 +563,9 @@ function checkHits() {
         attacker.comboWrapEl.classList.add('active');
       }
 
-      // Super meter for attacker
       attacker.superMeter = Math.min(SUPER_MAX, attacker.superMeter + SUPER_PER_HIT);
       attacker.syncHUD();
 
-      // Check KO
       if (defender.hp <= 0) {
         defender.hp = 0;
         defender.syncHUD();
@@ -715,7 +619,7 @@ function endGame(winner) {
   clearTimer();
 
   const char = winner === 'p1' ? p1.charData : p2.charData;
-  const msg  = `${char.name} WINS!`;
+  const msg = `${char.name} WINS!`;
 
   showMessage(msg, 'ko-message', 99999);
 
@@ -732,9 +636,9 @@ function endGame(winner) {
 }
 
 // ─── Screen shake ─────────────────────────────────────────────
-function screenShake(mag) { 
-  shakeFrames = 8; 
-  shakeMag = mag; 
+function screenShake(mag) {
+  shakeFrames = 8;
+  shakeMag = mag;
 }
 
 function applyShake(el) {
@@ -795,10 +699,8 @@ document.getElementById('restart-btn')?.addEventListener('click', () => {
 
 // ─── Main Loop ────────────────────────────────────────────────
 function gameLoop(timestamp) {
-  // Hit stop: freeze game for impact frames
   if (hitStopFrames > 0) {
     hitStopFrames--;
-    if (hitStopFrames <= 0) isHitStop = false;
     requestAnimationFrame(gameLoop);
     return;
   }
@@ -816,27 +718,19 @@ function gameLoop(timestamp) {
 
   if (gameState !== 'fighting') return;
 
-  // Update input system
   input.update();
-
-  // Update fighters
   p1.update(p2, input, true);
   p2.update(p1, input, false);
 
-  // Sync visuals
   p1._syncSprite();
   p2._syncSprite();
 
-  // Check hits
   checkHits();
-
-  // Apply screen shake
   if (stageEl) applyShake(stageEl);
 }
 
 // ─── Boot ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  // Load stage background from config
   const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
   const stageBg = document.getElementById('stage-bg-img');
   if (stageBg) stageBg.src = `assets/stages/${cfg.stage || 'djemaa'}.png`;

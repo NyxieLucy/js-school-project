@@ -22,7 +22,6 @@
       </div>
 
       <div class="versus-container">
-        
         <div class="vs-panel p1-panel">
           <div class="char-info left">
             <h2 class="char-name">ISSAM</h2>
@@ -49,7 +48,6 @@
           </div>
           <div class="p-tag p2-tag">P2</div>
         </div>
-
       </div>
 
       <div class="versus-footer">
@@ -63,12 +61,71 @@
   </div>
 
   <script src="js/config.js"></script>
+  <script src="js/character.js"></script> 
   <script src="js/background.js"></script>
+
   <script>
-    // Quick Logic for the Start Button
-    document.getElementById('start-fight').addEventListener('click', () => {
-      window.location.href = 'fight.html';
+    let p1Idx = 0;
+    let p2Idx = 1;
+
+    const p1NameEl = document.querySelector('.p1-panel .char-name');
+    const p1OriginEl = document.querySelector('.p1-panel .char-origin');
+    const p1ImgEl = document.getElementById('p1-portrait');
+
+    const p2NameEl = document.querySelector('.p2-panel .char-name');
+    const p2OriginEl = document.querySelector('.p2-panel .char-origin');
+    const p2ImgEl = document.getElementById('p2-portrait');
+
+    function updateDisplay() {
+      const p1 = ROSTER[p1Idx];
+      const p2 = ROSTER[p2Idx];
+
+      // Update P1
+      p1NameEl.textContent = p1.name;
+      p1OriginEl.textContent = p1.origin;
+      p1ImgEl.src = p1.sprites.idle;
+      
+      // Update P2
+      p2NameEl.textContent = p2.name;
+      p2OriginEl.textContent = p2.origin;
+      p2ImgEl.src = p2.sprites.idle;
+
+      // Persistence
+      localStorage.setItem('p1_selected', p1.id);
+      localStorage.setItem('p2_selected', p2.id);
+    }
+
+    // Improved controls: P1 uses Arrows, P2 uses WASD
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+
+      // P1: Up/Down Arrows
+      if (e.key === 'ArrowUp') p1Idx = (p1Idx + 1) % ROSTER.length;
+      if (e.key === 'ArrowDown') p1Idx = (p1Idx - 1 + ROSTER.length) % ROSTER.length;
+
+      // P2: W/S Keys
+      if (key === 'w') p2Idx = (p2Idx + 1) % ROSTER.length;
+      if (key === 's') p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+
+      // Back to Menu
+      if (key === 'x') window.location.href = 'index.html';
+      
+      // Start Fight
+      if (key === 'z' || key === 'enter') startBrawl();
+
+      updateDisplay();
     });
+
+    function startBrawl() {
+      // Add a small "Select" sound effect here later
+      window.location.href = 'fight.html';
+    }
+
+    document.getElementById('start-fight').addEventListener('click', startBrawl);
+
+    // Init
+    updateDisplay();
+    new BackgroundAnimation(); // Start the NixOS-style background
   </script>
 </body>
 </html>
