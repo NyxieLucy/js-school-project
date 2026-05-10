@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — Arcade Mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-arcade" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">ARCADE MODE</div>
+        <div class="sub-coins">CREDITS: <span id="credits">3</span></div>
+      </div>
+
+      <!-- Player Character Panel (1254x1254 ratio) -->
+      <div class="arcade-hero-section">
+        <div class="arcade-hero-card">
+          <div class="arcade-hero-frame">
+            <img id="arcade-hero-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
+          </div>
+          <div class="arcade-hero-info">
+            <div class="ah-name">ISSAM</div>
+            <div class="ah-name-ar">عصام</div>
+            <div class="ah-origin">CASABLANCA</div>
+          </div>
+        </div>
+
+        <div class="arcade-vs-divider">
+          <div class="vs-diamond">VS</div>
+          <div class="vs-line"></div>
+        </div>
+
+        <div class="arcade-opponent-card" id="arcade-opponent">
+          <div class="arcade-opponent-frame">
+            <div class="opponent-silhouette">?</div>
+          </div>
+          <div class="arcade-opponent-info">
+            <div class="ah-name">???</div>
+            <div class="ah-name-ar">غير معروف</div>
+            <div class="ah-origin">UNKNOWN</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arcade-ladder">
+        <div class="ladder-title">ROAD TO THE THRONE</div>
+        <div class="ladder-subtitle">طريق العرش</div>
+
+        <div class="ladder-track">
+          <div class="ladder-spine"></div>
+          <div class="rounds-list" id="rounds-list"></div>
+        </div>
+      </div>
+
+      <div class="diff-row">
+        <div class="diff-label">DIFFICULTY</div>
+        <div class="diff-options">
+          <button class="diff-btn active" data-diff="easy">INITIATE</button>
+          <button class="diff-btn" data-diff="normal">WARRIOR</button>
+          <button class="diff-btn" data-diff="hard">MASTER</button>
+          <button class="diff-btn" data-diff="legend">LEGEND</button>
+        </div>
+      </div>
+
+      <button class="start-btn" id="start-arcade">
+        START ARCADE
+        <span class="start-sub">ابدأ اللعبة</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

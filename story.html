@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — Story Mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-story" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">STORY MODE</div>
+        <div class="sub-title-ar">وضع القصة</div>
+      </div>
+
+      <!-- Story Hero Banner (1254x1254 ratio panel) -->
+      <div class="story-hero-banner">
+        <div class="story-hero-frame">
+          <img id="story-hero-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
+          <div class="story-hero-vignette"></div>
+        </div>
+        <div class="story-hero-text">
+          <div class="sh-chapter">CHAPTER 1</div>
+          <div class="sh-title">THE BRAWLER OF CASABLANCA</div>
+          <div class="sh-title-ar">محارب الدار البيضاء</div>
+          <div class="sh-desc">Issam must fight his way through the kingdom to reclaim his honor...</div>
+        </div>
+      </div>
+
+      <!-- Chapter Select Grid -->
+      <div class="chapter-grid" id="chapter-grid">
+        <div class="chapter-card active" data-chapter="1">
+          <div class="ch-num">01</div>
+          <div class="ch-title">THE BRAWLER</div>
+          <div class="ch-ar">المحارب</div>
+          <div class="ch-loc">CASABLANCA</div>
+          <div class="ch-status">AVAILABLE</div>
+        </div>
+        <div class="chapter-card" data-chapter="2">
+          <div class="ch-num">02</div>
+          <div class="ch-title">THE JOURNEY</div>
+          <div class="ch-ar">الرحلة</div>
+          <div class="ch-loc">MARRAKECH</div>
+          <div class="ch-status">LOCKED</div>
+        </div>
+        <div class="chapter-card locked" data-chapter="3">
+          <div class="ch-num">03</div>
+          <div class="ch-title">THE RIVAL</div>
+          <div class="ch-ar">الخصم</div>
+          <div class="ch-loc">FES</div>
+          <div class="ch-status">LOCKED</div>
+        </div>
+        <div class="chapter-card locked" data-chapter="4">
+          <div class="ch-num">04</div>
+          <div class="ch-title">THE FALL</div>
+          <div class="ch-ar">السقوط</div>
+          <div class="ch-loc">ATLAS</div>
+          <div class="ch-status">LOCKED</div>
+        </div>
+        <div class="chapter-card locked" data-chapter="5">
+          <div class="ch-num">05</div>
+          <div class="ch-title">THE RETURN</div>
+          <div class="ch-ar">العودة</div>
+          <div class="ch-loc">TANGIER</div>
+          <div class="ch-status">LOCKED</div>
+        </div>
+        <div class="chapter-card locked" data-chapter="6">
+          <div class="ch-num">06</div>
+          <div class="ch-title">THE THRONE</div>
+          <div class="ch-ar">العرش</div>
+          <div class="ch-loc">MEKNES</div>
+          <div class="ch-status">LOCKED</div>
+        </div>
+      </div>
+
+      <button class="start-btn" id="start-story">
+        BEGIN CHAPTER
+        <span class="start-sub">ابدأ الفصل</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

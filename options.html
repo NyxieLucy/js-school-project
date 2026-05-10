@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — Options</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-options" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">OPTIONS</div>
+        <div class="sub-title-ar">الإعدادات</div>
+      </div>
+
+      <div class="options-grid">
+
+        <div class="opt-group">
+          <div class="opt-group-title">VIDEO</div>
+          <div class="opt-row">
+            <span class="opt-label">Screen Filter</span>
+            <div class="opt-value">
+              <button class="opt-btn active">CRT</button>
+              <button class="opt-btn">SCANLINES</button>
+              <button class="opt-btn">OFF</button>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Brightness</span>
+            <div class="opt-slider">
+              <input type="range" min="0" max="100" value="80" />
+              <span class="slider-val">80%</span>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Screen Shake</span>
+            <div class="opt-value">
+              <button class="opt-btn active">ON</button>
+              <button class="opt-btn">OFF</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-group-title">AUDIO</div>
+          <div class="opt-row">
+            <span class="opt-label">Master Volume</span>
+            <div class="opt-slider">
+              <input type="range" min="0" max="100" value="90" />
+              <span class="slider-val">90%</span>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">SFX Volume</span>
+            <div class="opt-slider">
+              <input type="range" min="0" max="100" value="100" />
+              <span class="slider-val">100%</span>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Music Volume</span>
+            <div class="opt-slider">
+              <input type="range" min="0" max="100" value="70" />
+              <span class="slider-val">70%</span>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Voice Volume</span>
+            <div class="opt-slider">
+              <input type="range" min="0" max="100" value="85" />
+              <span class="slider-val">85%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-group-title">GAMEPLAY</div>
+          <div class="opt-row">
+            <span class="opt-label">Difficulty</span>
+            <div class="opt-value">
+              <button class="opt-btn">EASY</button>
+              <button class="opt-btn active">NORMAL</button>
+              <button class="opt-btn">HARD</button>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Round Time</span>
+            <div class="opt-value">
+              <button class="opt-btn">30s</button>
+              <button class="opt-btn active">60s</button>
+              <button class="opt-btn">99s</button>
+              <button class="opt-btn">∞</button>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Rounds to Win</span>
+            <div class="opt-value">
+              <button class="opt-btn">1</button>
+              <button class="opt-btn active">2</button>
+              <button class="opt-btn">3</button>
+              <button class="opt-btn">5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-group-title">CONTROLS</div>
+          <div class="opt-row">
+            <span class="opt-label">Input Display</span>
+            <div class="opt-value">
+              <button class="opt-btn active">ARCADE</button>
+              <button class="opt-btn">MODERN</button>
+            </div>
+          </div>
+          <div class="opt-row">
+            <span class="opt-label">Button Config</span>
+            <div class="opt-value">
+              <button class="opt-btn active">DEFAULT</button>
+              <button class="opt-btn">CUSTOM</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="options-footer">
+        <button class="opt-reset">RESET TO DEFAULT</button>
+        <button class="opt-save">SAVE & EXIT</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

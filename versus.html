@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — VS Mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-versus" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">VERSUS MODE</div>
+        <div class="sub-title-ar">وضع اللاعبين</div>
+      </div>
+
+      <!-- VS Screen Layout with 1254x1254 panels -->
+      <div class="versus-stage">
+
+        <!-- Player 1 Panel -->
+        <div class="vs-panel p1-panel" id="p1-panel">
+          <div class="vs-panel-frame">
+            <div class="vs-panel-inner">
+              <img id="p1-sprite" src="assets/characters/issam/idle.png" alt="ISSAM" />
+            </div>
+            <div class="panel-overlay p1-overlay">
+              <div class="panel-label">PLAYER 1</div>
+              <div class="panel-controls-hint">Press START</div>
+            </div>
+          </div>
+          <div class="vs-panel-info">
+            <div class="vp-name">ISSAM</div>
+            <div class="vp-name-ar">عصام</div>
+            <div class="vp-origin">CASABLANCA</div>
+            <div class="vp-wins">WINS: 0</div>
+          </div>
+        </div>
+
+        <!-- VS Center -->
+        <div class="vs-center">
+          <div class="vs-big-text">VS</div>
+          <div class="vs-decor">
+            <div class="vs-diamond-top"></div>
+            <div class="vs-diamond-bottom"></div>
+          </div>
+          <div class="vs-stage-select">
+            <div class="stage-label">STAGE</div>
+            <div class="stage-name" id="stage-name">DJEMAA EL-FNA</div>
+            <div class="stage-ar" id="stage-ar">ساحة جامع الفنا</div>
+          </div>
+        </div>
+
+        <!-- Player 2 Panel -->
+        <div class="vs-panel p2-panel" id="p2-panel">
+          <div class="vs-panel-frame">
+            <div class="vs-panel-inner">
+              <img id="p2-sprite" src="assets/characters/issam/idle.png" alt="ISSAM" />
+            </div>
+            <div class="panel-overlay p2-overlay">
+              <div class="panel-label">PLAYER 2</div>
+              <div class="panel-controls-hint">Press START</div>
+            </div>
+          </div>
+          <div class="vs-panel-info">
+            <div class="vp-name">ISSAM</div>
+            <div class="vp-name-ar">عصام</div>
+            <div class="vp-origin">CASABLANCA</div>
+            <div class="vp-wins">WINS: 0</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Stage Selection Row -->
+      <div class="stage-carousel">
+        <button class="stage-arrow left" id="stage-prev">&#9664;</button>
+        <div class="stage-thumbs" id="stage-thumbs">
+          <div class="stage-thumb active" data-stage="djemaa" data-ar="ساحة جامع الفنا">
+            <div class="thumb-frame">DJEMAA EL-FNA</div>
+          </div>
+          <div class="stage-thumb" data-stage="fes" data-ar="مدينة فاس">
+            <div class="thumb-frame">MEDINA OF FES</div>
+          </div>
+          <div class="stage-thumb" data-stage="tangier" data-ar="طنجة">
+            <div class="thumb-frame">KASBAH TANGIER</div>
+          </div>
+          <div class="stage-thumb" data-stage="agadir" data-ar="أكادير">
+            <div class="thumb-frame">AGADIR BEACH</div>
+          </div>
+          <div class="stage-thumb" data-stage="chefchaouen" data-ar="شفشاون">
+            <div class="thumb-frame">CHEFCHAOUEN</div>
+          </div>
+          <div class="stage-thumb" data-stage="atlas" data-ar="جبال الأطلس">
+            <div class="thumb-frame">ATLAS MOUNTAINS</div>
+          </div>
+        </div>
+        <button class="stage-arrow right" id="stage-next">&#9654;</button>
+      </div>
+
+      <button class="start-btn" id="start-fight">
+        FIGHT!
+        <span class="start-sub">قاتل!</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

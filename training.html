@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — Training</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-training" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">TRAINING DOJO</div>
+        <div class="sub-title-ar">وضع التدريب</div>
+      </div>
+
+      <!-- Training Layout: Hero + Settings -->
+      <div class="training-layout">
+
+        <!-- Hero Panel (1254x1254 ratio) -->
+        <div class="training-hero">
+          <div class="tr-hero-frame">
+            <img id="tr-hero-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
+          </div>
+          <div class="tr-hero-info">
+            <div class="tr-name">ISSAM</div>
+            <div class="tr-name-ar">عصام</div>
+            <div class="tr-move-display" id="move-display">IDLE</div>
+          </div>
+        </div>
+
+        <!-- Training Settings -->
+        <div class="training-settings">
+          <div class="settings-group">
+            <div class="settings-label">DUMMY SETTINGS</div>
+            <div class="setting-row">
+              <span class="setting-name">Dummy Action</span>
+              <div class="setting-options">
+                <button class="set-btn active">STAND</button>
+                <button class="set-btn">CROUCH</button>
+                <button class="set-btn">JUMP</button>
+                <button class="set-btn">BLOCK</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-name">CPU Attack</span>
+              <div class="setting-options">
+                <button class="set-btn active">OFF</button>
+                <button class="set-btn">ON</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">DISPLAY OPTIONS</div>
+            <div class="setting-row">
+              <span class="setting-name">Hitboxes</span>
+              <div class="setting-options">
+                <button class="set-btn active">OFF</button>
+                <button class="set-btn">ON</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-name">Input Display</span>
+              <div class="setting-options">
+                <button class="set-btn active">ON</button>
+                <button class="set-btn">OFF</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-name">Damage Numbers</span>
+              <div class="setting-options">
+                <button class="set-btn active">ON</button>
+                <button class="set-btn">OFF</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">METER SETTINGS</div>
+            <div class="setting-row">
+              <span class="setting-name">Super Meter</span>
+              <div class="setting-options">
+                <button class="set-btn">EMPTY</button>
+                <button class="set-btn active">HALF</button>
+                <button class="set-btn">FULL</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-name">Health</span>
+              <div class="setting-options">
+                <button class="set-btn">EMPTY</button>
+                <button class="set-btn active">HALF</button>
+                <button class="set-btn">FULL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Command List -->
+      <div class="command-list">
+        <div class="cmd-title">MOVE LIST</div>
+        <div class="cmd-grid">
+          <div class="cmd-item">
+            <div class="cmd-input">⬇➡+P</div>
+            <div class="cmd-name">HADOUKEN</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-input">➡⬇➘+P</div>
+            <div class="cmd-name">SHORYUKEN</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-input">⬅⬇⬅+K</div>
+            <div class="cmd-name">TATSUMAKI</div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-input">⬇⬇+K</div>
+            <div class="cmd-name">SLIDE KICK</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="start-btn" id="start-training">
+        ENTER DOJO
+        <span class="start-sub">ادخل الدوجو</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUK BRAWL — Survival</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="screen-survival" class="screen active">
+    <div class="sub-wrap">
+
+      <div class="sub-header">
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
+        <div class="sub-title">SURVIVAL MODE</div>
+        <div class="sub-title-ar">وضع البقاء</div>
+      </div>
+
+      <!-- Survival Stats + Hero Panel -->
+        <div class="survival-layout">
+          <div class="survival-stats">
+            <div class="stat-block">
+              <div class="stat-label">BEST STREAK</div>
+              <div class="stat-value" id="best-streak">00</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-label">TOTAL WINS</div>
+              <div class="stat-value" id="total-wins">00</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-label">RANK</div>
+              <div class="stat-value" id="survival-rank">NOVICE</div>
+            </div>
+          </div>
+
+          <div class="survival-hero">
+            <div class="sv-hero-frame">
+              <img id="sv-hero-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
+            </div>
+            <div class="sv-hero-info">
+              <div class="sv-name">ISSAM</div>
+              <div class="sv-name-ar">عصام</div>
+            </div>
+          </div>
+        </div>
+
+      <!-- Survival Rules -->
+      <div class="survival-rules">
+        <div class="rule-title">SURVIVAL RULES</div>
+        <div class="rule-list">
+          <div class="rule-item">
+            <span class="rule-bullet">▸</span>
+            <span>One health bar. No continues.</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-bullet">▸</span>
+            <span>Fight endless waves of enemies.</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-bullet">▸</span>
+            <span>Health partially restores each round.</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-bullet">▸</span>
+            <span>Difficulty increases every 3 wins.</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="start-btn" id="start-survival">
+        ENTER THE PIT
+        <span class="start-sub">ادخل الحلبة</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
