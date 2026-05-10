@@ -218,10 +218,100 @@ function startTimer() {
 ════════════════════════════════════════════ */
 function movePlayer(player, distance) {
   const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
+  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
+  const animator = animators[animKey];
+
+  // Don't interrupt attack animations
+  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+    return; // Currently playing a one-shot animation (punch, kick, etc.)
+  }
+
   const currentLeft = parseInt(wrap.style.left || '0');
-  const newLeft = Math.max(-80, Math.min(80, currentLeft + distance));
+  const newLeft = Math.max(-120, Math.min(120, currentLeft + distance));
   wrap.style.left = newLeft + 'px';
   wrap.style.position = 'relative';
+
+  // Play walk animation ONLY if not already walking
+  if (animator && fightState.roundActive && animator.current !== 'walk') {
+    animator.play('walk');
+  }
+}
+
+function stopMoving(player) {
+  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
+  const animator = animators[animKey];
+
+  // Only return to idle if we're walking (not attacking)
+  // Delay slightly so walk doesn't feel twitchy
+  setTimeout(() => {
+    if (animator && animator.current === 'walk') {
+      animator.play('idle');
+    }
+  }, 200);
+}
+
+function jumpPlayer(player) {
+  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
+  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
+  const animator = animators[animKey];
+
+  // Don't jump if already doing a non-looping animation
+  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+    return;
+  }
+
+  if (animator && fightState.roundActive) {
+    animator.play('jump', () => {
+      if (animator && fightState.roundActive && animator.current === 'jump') {
+        animator.play('idle');
+      }
+    });
+  }
+
+  // Visual jump - slow, floaty pixel-art feel
+  wrap.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+  const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
+  const currentLeft = wrap.style.left || '0';
+  wrap.style.transform = baseTransform + ' translateY(-60px)';
+  wrap.style.left = currentLeft;
+
+  setTimeout(() => {
+    wrap.style.transition = 'transform 0.7s cubic-bezier(0.4, 0, 0.6, 1)';
+    wrap.style.transform = baseTransform + ' translateY(0)';
+    wrap.style.left = currentLeft;
+  }, 800);
+}
+
+function crouchPlayer(player) {
+  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
+  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
+  const animator = animators[animKey];
+
+  // Don't crouch if already doing a non-looping animation
+  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+    return;
+  }
+
+  if (animator && fightState.roundActive) {
+    animator.play('crouch');
+  }
+
+  // Visual crouch - slow, deliberate
+  wrap.style.transition = 'transform 0.4s ease-out';
+  const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
+  const currentLeft = wrap.style.left || '0';
+  wrap.style.transform = baseTransform + ' scaleY(0.72) translateY(35px)';
+  wrap.style.left = currentLeft;
+
+  // Auto-release after 900ms - hold crouch longer
+  setTimeout(() => {
+    wrap.style.transition = 'transform 0.5s ease-out';
+    wrap.style.transform = baseTransform + ' scaleY(1) translateY(0)';
+    wrap.style.left = currentLeft;
+    if (animator && fightState.roundActive && animator.current === 'crouch') {
+      animator.play('idle');
+    }
+  }, 900);
 }
 
 /* ════════════════════════════════════════════
@@ -330,7 +420,7 @@ document.addEventListener('keydown', e => {
 
   if (fightState.paused || !fightState.roundActive) return;
 
-  // P1 controls
+  // P1 controls — WASD to move, ZXCV to attack
   if (e.key === 'z' || e.key === 'Z') {
     e.preventDefault();
     performAttack('p1', 'punch', 8);
@@ -351,29 +441,38 @@ document.addEventListener('keydown', e => {
       updateHUD();
     }
   }
-  if (e.key === 'ArrowLeft') {
+  // Movement: A/D or Arrow keys
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
     e.preventDefault();
-    movePlayer('p1', -20);
+    movePlayer('p1', -6);
   }
-  if (e.key === 'ArrowRight') {
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
     e.preventDefault();
-    movePlayer('p1', 20);
+    movePlayer('p1', 6);
+  }
+  if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    jumpPlayer('p1');
+  }
+  if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    crouchPlayer('p1');
   }
 
-  // P2 controls (number keys)
-  if (e.key === '1') {
+  // P2 controls — J/L to move, U/O/P/; to attack
+  if (e.key === 'u' || e.key === 'U') {
     e.preventDefault();
     performAttack('p2', 'punch', 8);
   }
-  if (e.key === '2') {
+  if (e.key === 'i' || e.key === 'I') {
     e.preventDefault();
     performAttack('p2', 'kick', 12);
   }
-  if (e.key === '3') {
+  if (e.key === 'o' || e.key === 'O') {
     e.preventDefault();
     performAttack('p2', 'block', 0);
   }
-  if (e.key === '4') {
+  if (e.key === 'p' || e.key === 'P') {
     e.preventDefault();
     if (fightState.p2.super >= 50) {
       performAttack('p2', 'special', 25);
@@ -381,10 +480,34 @@ document.addEventListener('keydown', e => {
       updateHUD();
     }
   }
+  // P2 Movement
+  if (e.key === 'j' || e.key === 'J') {
+    e.preventDefault();
+    movePlayer('p2', -6);
+  }
+  if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault();
+    movePlayer('p2', 6);
+  }
+  if (e.key === 'i' || e.key === 'I') {
+    // Already used for kick above, skip
+  }
+  if (e.key === 'k' || e.key === 'K') {
+    e.preventDefault();
+    crouchPlayer('p2');
+  }
 });
 
 document.addEventListener('keyup', e => {
   keys[e.key] = false;
+
+  // Stop walk animation when movement keys are released
+  if (['a','A','d','D','ArrowLeft','ArrowRight'].includes(e.key)) {
+    stopMoving('p1');
+  }
+  if (['j','J','l','L'].includes(e.key)) {
+    stopMoving('p2');
+  }
 });
 
 function performAttack(player, type, damageAmount) {
@@ -392,37 +515,45 @@ function performAttack(player, type, damageAmount) {
   const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
   const targetWrap = player === 'p1' ? els.spriteP2Wrap : els.spriteP1Wrap;
   const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
+  const animator = animators[animKey];
 
-  // Visual attack lunge
-  if (type !== 'block') {
-    wrap.classList.add('attacking');
-    setTimeout(() => wrap.classList.remove('attacking'), 250);
+  // Don't attack if already doing a non-looping animation
+  if (animator && animator.current && !animator.animSet[animator.current].loop) {
+    return;
   }
 
-  // Play animation
-  if (animators[animKey]) {
-    animators[animKey].play(type, () => {
-      if (animators[animKey] && fightState.roundActive) {
-        animators[animKey].play('idle');
+  // Visual attack lunge - slower, longer hold
+  if (type !== 'block') {
+    wrap.classList.add('attacking');
+    setTimeout(() => wrap.classList.remove('attacking'), 700);
+  }
+
+  // Play animation - callback only returns to idle if we're still on this anim
+  if (animator) {
+    animator.play(type, () => {
+      if (animator && fightState.roundActive && animator.current === type) {
+        animator.play('idle');
       }
     });
   }
 
-  // Target flinch animation
+  // Target flinch animation - slow, heavy impact feel
   if (damageAmount > 0) {
+    targetWrap.style.transition = 'transform 0.2s';
     targetWrap.style.transform = player === 'p1' 
-      ? 'scaleX(-1) translateX(-15px)' 
-      : 'translateX(-15px)';
+      ? 'scaleX(-1) translateX(-25px)' 
+      : 'translateX(-25px)';
     setTimeout(() => {
+      targetWrap.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)';
       targetWrap.style.transform = player === 'p1' ? 'scaleX(-1)' : '';
-    }, 200);
+    }, 400);
   }
 
   // Apply damage after hit connects
   if (damageAmount > 0) {
     setTimeout(() => {
       damage(target, damageAmount, true);
-    }, 180);
+    }, 450);
   }
 }
 
@@ -445,13 +576,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Load stage from URL params
+  const params = new URLSearchParams(window.location.search);
+  const stageKey = params.get('stage') || 'djemaa';
+  const stage = STAGES[stageKey] || STAGES.djemaa;
+
   const stageBgImg = document.getElementById('stage-bg-img');
   if (stageBgImg && stageKey) {
     stageBgImg.src = 'assets/stages/' + stageKey + '.png';
   }
-  const params = new URLSearchParams(window.location.search);
-  const stageKey = params.get('stage') || 'djemaa';
-  const stage = STAGES[stageKey] || STAGES.djemaa;
 
   if (els.stageName) els.stageName.textContent = stage.name;
   if (els.stageAr) els.stageAr.textContent = stage.ar;

@@ -180,12 +180,12 @@
     .fighter-arena {
       position: relative;
       width: 100%;
-      max-width: 900px;
-      height: 380px;
+      max-width: 800px;
+      height: 280px;
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
-      padding: 0 80px 30px;
+      padding: 0 100px 25px;
       z-index: 5;
     }
 
@@ -199,18 +199,18 @@
     .arena-fighter.right { align-items: flex-end; }
 
     .fighter-sprite-arena {
-      width: 320px;
-      height: 320px;
+      width: 220px;
+      height: 220px;
       image-rendering: pixelated;
       position: relative;
-      transition: transform 0.15s;
+      transition: transform 0.25s ease-out;
     }
 
     .fighter-sprite-arena.attacking {
-      transform: translateX(50px);
+      transform: translateX(35px);
     }
     .arena-fighter.right .fighter-sprite-arena.attacking {
-      transform: translateX(-50px) scaleX(-1);
+      transform: translateX(-35px) scaleX(-1);
     }
 
     .fighter-sprite-arena img {
@@ -224,11 +224,11 @@
 
     .fighter-shadow-arena {
       position: absolute;
-      bottom: -12px;
+      bottom: -8px;
       left: 50%;
       transform: translateX(-50%);
-      width: 160px;
-      height: 24px;
+      width: 110px;
+      height: 18px;
       background: rgba(0,0,0,0.5);
       border-radius: 50%;
       filter: blur(4px);

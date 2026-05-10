@@ -1,4 +1,12 @@
+/* ══════════════════════════════════════════════════════════════
+   SOUK BRAWL — style.css
+   Unified stylesheet for all screens
+   Pixel-art arcade aesthetic, Moroccan colour palette
+   Font: Press Start 2P (Google Fonts)
+   Character panel ratio: 1254×1254 (square 1:1)
+══════════════════════════════════════════════════════════════ */
 
+/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── Root tokens ── */
@@ -127,14 +135,14 @@ body::after {
 .hero-showcase {
   position: relative;
   width: 100%;
-  max-width: 380px;
+  max-width: 280px;
   aspect-ratio: 1 / 1;
   margin-bottom: 24px;
 }
 
 @media (min-width: 768px) {
   .hero-showcase {
-    max-width: 420px;
+    max-width: 320px;
   }
 }
 
@@ -379,7 +387,7 @@ body::after {
 
 .arcade-hero-frame, .arcade-opponent-frame {
   width: 100%;
-  max-width: 320px;
+  max-width: 240px;
   aspect-ratio: 1 / 1;
   background: var(--panel);
   border: 3px solid var(--gold);
@@ -625,9 +633,9 @@ body::after {
 }
 
 .vs-panel-frame {
-  position: relative;
-  width: 100%;
-  max-width: 320px;
+      position: relative;
+      width: 100%;
+      max-width: 260px;
   aspect-ratio: 1 / 1;
   background: var(--panel);
   border: 3px solid var(--gold);
@@ -839,8 +847,9 @@ body::after {
 }
 
 .story-hero-frame {
-  position: relative;
-  width: 160px;
+      position: relative;
+      width: 140px;
+      height: 140px;
   height: 160px;
   flex-shrink: 0;
   background: var(--panel-l);
@@ -1023,7 +1032,8 @@ body::after {
 }
 
 .sv-hero-frame {
-  width: 200px;
+      width: 180px;
+      height: 180px;
   height: 200px;
   background: var(--panel);
   border: 3px solid var(--crimson);
@@ -1113,7 +1123,8 @@ body::after {
 }
 
 .tr-hero-frame {
-  width: 240px;
+      width: 220px;
+      height: 220px;
   height: 240px;
   background: var(--panel);
   border: 3px solid var(--teal);
@@ -1423,7 +1434,9 @@ body::after {
   }
 
   .vs-panel-frame {
-    max-width: 240px;
+      position: relative;
+      width: 100%;
+      max-width: 260px;
   }
 
   .arcade-hero-section {
@@ -1461,7 +1474,10 @@ body::after {
 
 @media (max-width: 520px) {
   .logo-souk, .logo-brawl { font-size: 22px; }
-  .hero-showcase { max-width: 280px; }
+  .hero-showcase {
+  position: relative;
+  width: 100%;
+  max-width: 280px; }
   .menu-item { font-size: 9px; }
   .chapter-grid { grid-template-columns: 1fr; }
   .stage-carousel { flex-direction: column; }

@@ -34,15 +34,24 @@ class SpriteAnimator {
     this.current  = null;
     this.frameIdx = 0;
     this.timer    = null;
+    this.isPlayingOneShot = false;
   }
 
   play(name, onDone) {
     if (!this.animSet[name]) return;
+
+    // If currently playing a one-shot animation, don't interrupt with idle/walk
+    if (this.isPlayingOneShot && this.animSet[name].loop) {
+      return; // Ignore loop requests (idle/walk) while one-shot is playing
+    }
+
+    // If same loop animation already playing, don't restart
     if (this.current === name && this.animSet[name].loop) return;
 
     clearInterval(this.timer);
     this.current  = name;
     this.frameIdx = 0;
+    this.isPlayingOneShot = !this.animSet[name].loop;
 
     const anim  = this.animSet[name];
     const delay = Math.round(1000 / anim.fps);
@@ -59,6 +68,7 @@ class SpriteAnimator {
         } else {
           clearInterval(this.timer);
           this.timer = null;
+          this.isPlayingOneShot = false;
           if (onDone) onDone();
         }
       }
@@ -71,6 +81,7 @@ class SpriteAnimator {
   stop() {
     clearInterval(this.timer);
     this.timer = null;
+    this.isPlayingOneShot = false;
   }
 
   destroy() {
