@@ -1,598 +1,719 @@
-/* ══════════════════════════════════════════════════════════════
-   SOUK BRAWL — fight.js
-   Fight scene engine: health, timer, combos, rounds, pause
-══════════════════════════════════════════════════════════════ */
+// ═══════════════════════════════════════════════════════════
+//  SOUK BRAWL — fight.js
+//  Full fight engine: input, physics, hitboxes, AI, rounds
+// ═══════════════════════════════════════════════════════════
 
 'use strict';
 
-/* ════════════════════════════════════════════
-   FIGHT STATE
-════════════════════════════════════════════ */
-const fightState = {
-  p1: { health: 100, super: 0, combo: 0, wins: 0 },
-  p2: { health: 100, super: 0, combo: 0, wins: 0 },
-  timer: 60,
-  round: 1,
-  maxRounds: 3,
-  paused: false,
-  fighting: false,
-  roundActive: false,
-  timerInterval: null,
-  comboTimer: null,
-};
+// ─── Constants ───────────────────────────────────────────────
+const STAGE_W   = 900;   // logical canvas width
+const STAGE_H   = 420;   // logical canvas height
+const GROUND_Y  = 340;   // y position of the ground (fighter feet)
+const GRAVITY   = 0.65;
+const JUMP_VY   = -14;
+const WALL_L    = 40;
+const WALL_R    = STAGE_W - 40;
 
-/* ════════════════════════════════════════════
-   DOM REFERENCES
-════════════════════════════════════════════ */
-const els = {
-  healthP1:    document.getElementById('health-p1'),
-  healthP2:    document.getElementById('health-p2'),
-  superP1:     document.getElementById('super-p1'),
-  superP2:     document.getElementById('super-p2'),
-  timer:       document.getElementById('timer'),
-  roundInd:    document.getElementById('round-indicator'),
-  comboP1:     document.getElementById('combo-p1'),
-  comboP2:     document.getElementById('combo-p2'),
-  comboCountP1: document.getElementById('combo-count-p1'),
-  comboCountP2: document.getElementById('combo-count-p2'),
-  winsP1:      document.getElementById('wins-p1'),
-  winsP2:      document.getElementById('wins-p2'),
-  messageLayer: document.getElementById('message-layer'),
-  pauseMenu:   document.getElementById('pause-menu'),
-  stageName:   document.getElementById('stage-name-fight'),
-  stageAr:     document.getElementById('stage-ar-fight'),
-  spriteP1:    document.getElementById('sprite-p1'),
-  spriteP2:    document.getElementById('sprite-p2'),
-  spriteP1Wrap: document.getElementById('sprite-p1-wrap'),
-  spriteP2Wrap: document.getElementById('sprite-p2-wrap'),
-};
+const HP_MAX    = 100;
+const SUPER_MAX = 100;
+const SUPER_PER_HIT = 8;   // super gained when landing a hit
+const SUPER_PER_RECV = 4;  // super gained when taking a hit (guts)
+const BLOCK_CHIP = 0.15;   // blocked hits deal 15% chip damage
 
-/* ════════════════════════════════════════════
-   STAGE DATA
-════════════════════════════════════════════ */
-const STAGES = {
-  djemaa:      { name: 'DJEMAA EL-FNA',      ar: 'ساحة جامع الفنا' },
-  fes:         { name: 'MEDINA OF FES',      ar: 'مدينة فاس' },
-  tangier:     { name: 'KASBAH TANGIER',     ar: 'طنجة' },
-  agadir:      { name: 'AGADIR BEACH',       ar: 'أكادير' },
-  chefchaouen: { name: 'CHEFCHAOUEN',        ar: 'شفشاون' },
-  atlas:       { name: 'ATLAS MOUNTAINS',    ar: 'جبال الأطلس' },
-};
+const ROUND_START_DELAY = 2000; // ms before "FIGHT!" fades
+const KO_DISPLAY_TIME   = 2500;
+const BETWEEN_ROUND     = 3000;
 
-/* ════════════════════════════════════════════
-   MESSAGE SYSTEM
-════════════════════════════════════════════ */
-function showMessage(text, duration = 2000) {
-  const msg = document.createElement('div');
-  msg.className = 'fight-message';
-  msg.textContent = text;
-  els.messageLayer.appendChild(msg);
+// AI reaction budgets per difficulty (frames to decide)
+const AI_REACT = { easy: 45, normal: 28, hard: 14, legend: 6 };
+const AI_AGGRESSION = { easy: 0.3, normal: 0.55, hard: 0.75, legend: 0.92 };
 
-  setTimeout(() => {
-    msg.classList.add('fade');
-    setTimeout(() => msg.remove(), 500);
-  }, duration);
-}
+// ─── Game State ──────────────────────────────────────────────
+let gameState = 'intro'; // intro | fighting | paused | round_end | game_end
+let currentRound = 1;
+let totalRounds  = 3;
+let countdown    = 60;
+let timerInterval = null;
+let animFrameId   = null;
+let frameCount    = 0;
 
-function showKO() {
-  const msg = document.createElement('div');
-  msg.className = 'ko-message';
-  msg.textContent = 'K.O.';
-  els.messageLayer.appendChild(msg);
-  return msg;
-}
+// ─── Fighter class ───────────────────────────────────────────
+class Fighter {
+  constructor(cfg) {
+    this.id       = cfg.id;
+    this.charData = ROSTER.find(c => c.id === cfg.id) || ROSTER[0];
+    this.side     = cfg.side; // 'left' | 'right'
+    this.isAI     = cfg.isAI || false;
 
-function showPerfect() {
-  const msg = document.createElement('div');
-  msg.className = 'perfect-message';
-  msg.textContent = 'PERFECT!';
-  els.messageLayer.appendChild(msg);
-  setTimeout(() => msg.remove(), 2000);
-}
+    // Position & physics
+    this.x    = cfg.side === 'left' ? 160 : STAGE_W - 260;
+    this.y    = GROUND_Y;
+    this.vx   = 0;
+    this.vy   = 0;
+    this.facing = cfg.side === 'left' ? 1 : -1; // 1=right, -1=left
 
-/* ════════════════════════════════════════════
-   ROUND SYSTEM
-════════════════════════════════════════════ */
-function startRound() {
-  fightState.roundActive = true;
-  fightState.fighting = true;
-  fightState.p1.health = 100;
-  fightState.p2.health = 100;
-  fightState.p1.super = 0;
-  fightState.p2.super = 0;
-  fightState.p1.combo = 0;
-  fightState.p2.combo = 0;
-  fightState.timer = 60;
+    // Stats derived from charData
+    const spd = this.charData.stats.speed;
+    const def = this.charData.stats.defense;
+    this.walkSpeed   = 2.5 + spd * 0.35;
+    this.defMult     = 1 - (def - 1) * 0.03; // 0.97 to 0.73
 
-  updateHUD();
-  updateWinDots();
-  hideCombos();
+    // Combat state
+    this.hp         = HP_MAX;
+    this.superMeter = 0;
+    this.wins       = 0;
+    this.state      = 'idle'; // idle|walk|jump|punch|kick|block|special|hurt|ko
+    this.actionFrame = 0;     // frames remaining in current action
+    this.hitstun    = 0;
+    this.blockstun  = 0;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.isBlocking = false;
+    this.onGround   = true;
+    this.lastHitFrame = -999;
 
-  const roundAr = ['الجولة الأولى', 'الجولة الثانية', 'الجولة الثالثة'];
-  els.roundInd.innerHTML = `<div>ROUND ${fightState.round}</div><div class="round-ar">${roundAr[fightState.round - 1] || ''}</div>`;
+    // Sprite DOM references
+    this.wrapEl  = document.getElementById(cfg.side === 'left' ? 'sprite-p1-wrap' : 'sprite-p2-wrap');
+    this.imgEl   = document.getElementById(cfg.side === 'left' ? 'sprite-p1'      : 'sprite-p2');
+    this.hpEl    = document.getElementById(cfg.side === 'left' ? 'health-p1'      : 'health-p2');
+    this.superEl = document.getElementById(cfg.side === 'left' ? 'super-p1'       : 'super-p2');
+    this.comboWrapEl = document.getElementById(cfg.side === 'left' ? 'combo-p1'   : 'combo-p2');
+    this.comboCountEl = document.getElementById(cfg.side === 'left' ? 'combo-count-p1' : 'combo-count-p2');
 
-  // "ROUND X" then "FIGHT!"
-  showMessage('ROUND ' + fightState.round, 1200);
-  setTimeout(() => {
-    showMessage('FIGHT!', 1500);
-    startTimer();
+    // AI state
+    this.aiReactTimer  = 0;
+    this.aiDecision    = null; // { action, duration }
 
-    // Start idle animations
-    if (animators.p1Fight) animators.p1Fight.play('idle');
-    if (animators.p2Fight) animators.p2Fight.play('idle');
-  }, 1400);
-}
-
-function endRound(winner) {
-  fightState.roundActive = false;
-  fightState.fighting = false;
-  clearInterval(fightState.timerInterval);
-
-  if (winner === 'p1') fightState.p1.wins++;
-  if (winner === 'p2') fightState.p2.wins++;
-
-  // Check perfect
-  const winnerHealth = winner === 'p1' ? fightState.p1.health : fightState.p2.health;
-  if (winnerHealth >= 100) {
-    showPerfect();
+    this._loadSprite('idle');
   }
 
-  const koMsg = showKO();
-  updateWinDots();
+  // ── Sprite helpers ──
+  _loadSprite(stateName) {
+    const src = getSpriteWithFallback(this.id, stateName);
+    if (this.imgEl && this.imgEl.src !== src) this.imgEl.src = src;
+  }
 
-  setTimeout(() => {
-    koMsg.remove();
+  _syncSprite() {
+    const map = { idle:'idle', walk:'walk', jump:'jump', punch:'punch',
+                  kick:'kick', block:'block', special:'special',
+                  hurt:'hurt', ko:'ko' };
+    this._loadSprite(map[this.state] || 'idle');
+    // Flip sprite based on facing direction
+    if (this.wrapEl) {
+      const base = this.side === 'right' ? -1 : 1;
+      const flip = base * this.facing;
+      this.wrapEl.style.transform = flip < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    }
+    // Position the element in the stage
+    if (this.wrapEl) {
+      const pct = ((this.x - 110) / (STAGE_W - 220)) * 100;
+      this.wrapEl.parentElement.style.left = `${Math.max(0, Math.min(100, pct))}%`;
+    }
+  }
 
-    if (fightState.p1.wins >= 2 || fightState.p2.wins >= 2 || fightState.round >= fightState.maxRounds) {
-      endMatch();
+  // ── HUD sync ──
+  syncHUD() {
+    if (this.hpEl) {
+      const pct = Math.max(0, (this.hp / HP_MAX) * 100);
+      this.hpEl.style.width = pct + '%';
+      this.hpEl.classList.toggle('danger', pct <= 25);
+    }
+    if (this.superEl) {
+      this.superEl.style.width = Math.min(100, (this.superMeter / SUPER_MAX) * 100) + '%';
+    }
+  }
+
+  // ── Combat ──
+  get hitboxX() { return this.x - 55; }
+  get hitboxW() { return 110; }
+  get hitboxY() { return this.y - 220; }
+  get hitboxH() { return 220; }
+
+  getAttackBox(moveType) {
+    const reach = 80;
+    const bx = this.facing > 0 ? this.x + 20 : this.x - 20 - reach;
+    const height = moveType === 'kick' ? 100 : 150;
+    const yOff   = moveType === 'kick' ? 60 : 20;
+    return { x: bx, y: this.y - height - yOff, w: reach, h: height };
+  }
+
+  overlaps(box) {
+    return !(box.x + box.w < this.hitboxX ||
+             box.x > this.hitboxX + this.hitboxW ||
+             box.y + box.h < this.hitboxY ||
+             box.y > this.hitboxY + this.hitboxH);
+  }
+
+  receiveHit(moveData) {
+    if (this.state === 'ko') return;
+    const dmgRaw = moveData.damage * this.defMult;
+
+    if (this.isBlocking && this.onGround) {
+      // Blocked — take chip only
+      const chip = dmgRaw * BLOCK_CHIP;
+      this.hp = Math.max(0, this.hp - chip);
+      this.blockstun = Math.floor(moveData.hitstun * 0.6);
+      this.state = 'block';
+      this.actionFrame = this.blockstun;
+      // small pushback
+      this.vx = this.facing * -1.5;
     } else {
-      fightState.round++;
-      setTimeout(startRound, 2500);
+      this.hp = Math.max(0, this.hp - dmgRaw);
+      this.hitstun = moveData.hitstun;
+      this.actionFrame = this.hitstun;
+      this.state = 'hurt';
+      // Knockback
+      this.vx = -this.facing * (moveData.kb * 0.6);
+      if (moveData.kb > 10 && this.onGround) this.vy = -5; // launch slightly
     }
-  }, 2500);
-}
+    this.superMeter = Math.min(SUPER_MAX, this.superMeter + SUPER_PER_RECV);
+    this.syncHUD();
+    return dmgRaw;
+  }
 
-function endMatch() {
-  const p1Won = fightState.p1.wins > fightState.p2.wins;
-  const winner = p1Won ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS';
-  const winnerAr = p1Won ? 'فاز اللاعب 1' : 'فاز اللاعب 2';
+  // ── Frame update ──
+  update(opponent, keys) {
+    frameCount++;
+    if (this.state === 'ko') {
+      this._syncSprite();
+      return;
+    }
 
-  const msg = document.createElement('div');
-  msg.className = 'fight-message';
-  msg.innerHTML = `<div>${winner}</div><div style="font-size:16px; color:var(--gold-l); margin-top:8px;">${winnerAr}</div>`;
-  msg.style.animation = 'fight-zoom 1s ease-out forwards';
-  els.messageLayer.appendChild(msg);
+    // ── Timers ──
+    if (this.actionFrame > 0) this.actionFrame--;
+    if (this.comboTimer > 0) {
+      this.comboTimer--;
+    } else if (this.comboCount > 0) {
+      this.comboCount = 0;
+      if (this.comboWrapEl) this.comboWrapEl.classList.remove('active');
+    }
 
-  setTimeout(() => {
-    if (confirm('Play again? / العب مرة أخرى؟')) {
-      resetMatch();
+    // ── Auto-face opponent ──
+    if (this.state === 'idle' || this.state === 'walk') {
+      this.facing = opponent.x > this.x ? 1 : -1;
+    }
+
+    // ── Movement / action input ──
+    if (this.isAI) {
+      this._doAI(opponent);
     } else {
-      window.location.href = 'index.html';
-    }
-  }, 3000);
-}
-
-function resetMatch() {
-  fightState.p1.wins = 0;
-  fightState.p2.wins = 0;
-  fightState.round = 1;
-  document.querySelectorAll('.win-dot').forEach(d => d.classList.remove('active'));
-  startRound();
-}
-
-/* ════════════════════════════════════════════
-   TIMER
-════════════════════════════════════════════ */
-function startTimer() {
-  clearInterval(fightState.timerInterval);
-  els.timer.textContent = fightState.timer;
-  els.timer.style.color = '';
-
-  fightState.timerInterval = setInterval(() => {
-    if (fightState.paused || !fightState.roundActive) return;
-
-    fightState.timer--;
-    els.timer.textContent = fightState.timer;
-
-    if (fightState.timer <= 10) {
-      els.timer.style.color = '#E03030';
+      this._doInput(keys);
     }
 
-    if (fightState.timer <= 0) {
-      clearInterval(fightState.timerInterval);
-      // Time over — whoever has more health wins
-      if (fightState.p1.health > fightState.p2.health) {
-        endRound('p1');
-      } else if (fightState.p2.health > fightState.p1.health) {
-        endRound('p2');
+    // ── Physics ──
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += GRAVITY;
+
+    // Ground collision
+    if (this.y >= GROUND_Y) {
+      this.y = GROUND_Y;
+      this.vy = 0;
+      if (!this.onGround) {
+        this.onGround = true;
+        if (this.state === 'jump') {
+          this.state = 'idle';
+          this.actionFrame = 0;
+        }
+      }
+    } else {
+      this.onGround = false;
+    }
+
+    // Wall clamp
+    if (this.x < WALL_L) { this.x = WALL_L; this.vx = 0; }
+    if (this.x > WALL_R) { this.x = WALL_R; this.vx = 0; }
+
+    // Push apart if overlapping
+    if (Math.abs(this.x - opponent.x) < 80 && this.onGround) {
+      const push = this.x < opponent.x ? -1.5 : 1.5;
+      this.x += push;
+    }
+
+    // Velocity friction
+    this.vx *= 0.82;
+
+    // ── Idle fallback ──
+    if (this.actionFrame <= 0 && this.state !== 'idle' &&
+        this.state !== 'walk' && this.state !== 'jump' && this.state !== 'ko') {
+      this.state = 'idle';
+    }
+
+    this._syncSprite();
+    this.syncHUD();
+  }
+
+  // ── Keyboard input ──
+  _doInput(keys) {
+    if (this.actionFrame > 0 && (this.state === 'hurt' || this.state === 'block')) return;
+    if (this.state === 'punch' || this.state === 'kick' || this.state === 'special') {
+      if (this.actionFrame > 0) return; // still in animation
+    }
+
+    const cfg = this.side === 'left' ? KEYS_P1 : KEYS_P2;
+    this.isBlocking = keys[cfg.block] && this.onGround;
+
+    if (this.isBlocking) {
+      this.state = 'block';
+      this.actionFrame = 2;
+      this.vx *= 0.5;
+      return;
+    }
+
+    // Attacks
+    if (keys[cfg.special] && this.superMeter >= SUPER_MAX) {
+      this._doAttack('special');
+      this.superMeter = 0;
+      return;
+    }
+    if (keys[cfg.kick])  { this._doAttack('kick');  return; }
+    if (keys[cfg.punch]) { this._doAttack('punch'); return; }
+
+    // Jump
+    if (keys[cfg.up] && this.onGround) {
+      this.vy = JUMP_VY;
+      this.onGround = false;
+      this.state = 'jump';
+      this.actionFrame = 30;
+    }
+
+    // Walk
+    const moving = keys[cfg.left] || keys[cfg.right];
+    if (moving && this.onGround && this.state !== 'jump') {
+      this.state = 'walk';
+      if (keys[cfg.left])  this.vx = -this.walkSpeed;
+      if (keys[cfg.right]) this.vx =  this.walkSpeed;
+    } else if (!moving && this.state === 'walk') {
+      this.state = 'idle';
+    }
+  }
+
+  _doAttack(type) {
+    const move = this.charData.moves[type];
+    this.state = type;
+    this.actionFrame = move.startup + move.active + move.recovery;
+    // Store when the hitbox becomes active
+    this._attackActiveStart = move.startup;
+    this._attackActiveEnd   = move.startup + move.active;
+    this._attackType        = type;
+    this._hitLanded         = false;
+  }
+
+  // ── AI Brain ──
+  _doAI(opponent) {
+    const diff = (window._fightDifficulty) || 'normal';
+    const reactFrames = AI_REACT[diff] || 28;
+    const aggression  = AI_AGGRESSION[diff] || 0.55;
+
+    this.aiReactTimer++;
+    if (this.aiReactTimer < reactFrames) {
+      // Execute current decision
+      this._executeAIDecision(opponent);
+      return;
+    }
+    this.aiReactTimer = 0;
+
+    const dist = Math.abs(this.x - opponent.x);
+    const opHP = opponent.hp / HP_MAX;
+    const myHP = this.hp / HP_MAX;
+
+    // Decide
+    if (this.actionFrame > 0) return;
+
+    // Low HP — be more defensive if easy, more aggressive if legend
+    const defendBias = diff === 'easy' ? 0.5 : diff === 'legend' ? 0.1 : 0.25;
+    const shouldDefend = myHP < 0.3 && Math.random() < defendBias;
+
+    if (shouldDefend) {
+      this.aiDecision = { action: 'retreat', duration: reactFrames * 2 };
+      return;
+    }
+
+    // Super move when meter full and opponent close
+    if (this.superMeter >= SUPER_MAX && dist < 200 && Math.random() < aggression) {
+      this._doAttack('special');
+      this.superMeter = 0;
+      return;
+    }
+
+    if (dist > 250) {
+      // Far — approach
+      this.aiDecision = { action: 'approach', duration: reactFrames * 3 };
+    } else if (dist < 90) {
+      // Close — attack or jump back
+      const roll = Math.random();
+      if (roll < aggression * 0.6) {
+        this._doAttack(Math.random() < 0.6 ? 'punch' : 'kick');
+      } else if (roll < aggression * 0.8) {
+        this.aiDecision = { action: 'jump_back', duration: 1 };
       } else {
-        showMessage('DRAW! / تعادل!', 2000);
-        setTimeout(startRound, 2500);
+        this.isBlocking = true;
+        this.state = 'block';
+        this.actionFrame = reactFrames;
+      }
+    } else {
+      // Mid range
+      const roll = Math.random();
+      if (roll < aggression * 0.5) {
+        this._doAttack(Math.random() < 0.5 ? 'kick' : 'punch');
+      } else if (roll < 0.7) {
+        this.aiDecision = { action: 'approach', duration: reactFrames * 2 };
+      } else {
+        this.aiDecision = { action: 'neutral', duration: reactFrames };
       }
     }
+  }
+
+  _executeAIDecision(opponent) {
+    if (!this.aiDecision) return;
+    if (this.actionFrame > 0) return;
+
+    switch (this.aiDecision.action) {
+      case 'approach':
+        this.state = 'walk';
+        this.vx = (opponent.x > this.x ? 1 : -1) * this.walkSpeed;
+        break;
+      case 'retreat':
+        this.state = 'walk';
+        this.vx = (opponent.x > this.x ? -1 : 1) * this.walkSpeed;
+        break;
+      case 'jump_back':
+        if (this.onGround) {
+          this.vy = JUMP_VY;
+          this.vx = (opponent.x > this.x ? -1 : 1) * this.walkSpeed * 1.5;
+          this.state = 'jump';
+          this.actionFrame = 30;
+        }
+        this.aiDecision = null;
+        break;
+      case 'neutral':
+        if (this.state === 'walk') this.state = 'idle';
+        break;
+    }
+  }
+
+  // Hitbox active this frame?
+  attackActiveThisFrame() {
+    if (!this._attackType) return false;
+    const elapsed = (this.charData.moves[this._attackType].startup +
+                     this.charData.moves[this._attackType].active +
+                     this.charData.moves[this._attackType].recovery) - this.actionFrame;
+    return elapsed >= this._attackActiveStart && elapsed < this._attackActiveEnd && !this._hitLanded;
+  }
+}
+
+// ─── Key Bindings ─────────────────────────────────────────────
+const KEYS_P1 = { left:'ArrowLeft', right:'ArrowRight', up:'ArrowUp', down:'ArrowDown',
+                  punch:'z', kick:'x', block:'c', special:'v' };
+const KEYS_P2 = { left:'a', right:'d', up:'w', down:'s',
+                  punch:'j', kick:'k', block:'l', special:'i' };
+
+const keysDown = {};
+document.addEventListener('keydown', e => {
+  keysDown[e.key] = true;
+  if (e.key === 'Escape') togglePause();
+  // Prevent arrow keys scrolling page
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { keysDown[e.key] = false; });
+
+// ─── Fighters ─────────────────────────────────────────────────
+let p1, p2;
+
+// ─── Round tracking ───────────────────────────────────────────
+const wins = { p1: 0, p2: 0 };
+
+function initFighters() {
+  const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
+  window._fightDifficulty = cfg.difficulty;
+  totalRounds = cfg.rounds || 3;
+  countdown   = cfg.timer  || 60;
+
+  const isVersus = cfg.mode === 'versus';
+
+  p1 = new Fighter({ id: cfg.p1CharId || 'issam', side: 'left',  isAI: false });
+  p2 = new Fighter({ id: cfg.p2CharId || 'issam', side: 'right', isAI: !isVersus });
+
+  // Update HUD names
+  const p1data = p1.charData;
+  const p2data = p2.charData;
+  document.querySelectorAll('.hud-side.left  .hud-name')[0].textContent = p1data.name;
+  document.querySelectorAll('.hud-side.left  .hud-name-ar')[0].textContent = p1data.nameAr;
+  document.querySelectorAll('.hud-side.right .hud-name')[0].textContent = p2data.name;
+  document.querySelectorAll('.hud-side.right .hud-name-ar')[0].textContent = p2data.nameAr;
+
+  updateWinDots();
+}
+
+// ─── Round start ──────────────────────────────────────────────
+function startRound() {
+  gameState = 'intro';
+  clearTimer();
+
+  // Reset fighter positions & HP
+  p1.x = 160; p1.y = GROUND_Y; p1.vx = 0; p1.vy = 0;
+  p1.hp = HP_MAX; p1.state = 'idle'; p1.actionFrame = 0;
+  p1.hitstun = 0; p1.blockstun = 0; p1.comboCount = 0;
+
+  p2.x = STAGE_W - 260; p2.y = GROUND_Y; p2.vx = 0; p2.vy = 0;
+  p2.hp = HP_MAX; p2.state = 'idle'; p2.actionFrame = 0;
+  p2.hitstun = 0; p2.blockstun = 0; p2.comboCount = 0;
+
+  p1.syncHUD(); p2.syncHUD();
+
+  // Round indicator
+  const roundEl = document.getElementById('round-indicator');
+  const roundNames = ['الجولة الأولى','الجولة الثانية','الجولة الثالثة','الجولة الرابعة','الجولة الخامسة'];
+  if (roundEl) {
+    roundEl.innerHTML = `<div>ROUND ${currentRound}</div><div class="round-ar">${roundNames[currentRound-1] || ''}</div>`;
+    roundEl.style.opacity = '1';
+  }
+
+  showMessage('FIGHT!', 'fight-message', ROUND_START_DELAY);
+
+  setTimeout(() => {
+    gameState = 'fighting';
+    startTimer();
+  }, ROUND_START_DELAY);
+}
+
+// ─── Timer ────────────────────────────────────────────────────
+function startTimer() {
+  const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
+  countdown = cfg.timer || 60;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    if (gameState !== 'fighting') return;
+    countdown--;
+    updateTimerDisplay();
+    if (countdown <= 0) timeOut();
   }, 1000);
 }
 
-/* ════════════════════════════════════════════
-   MOVEMENT
-════════════════════════════════════════════ */
-function movePlayer(player, distance) {
-  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
-  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
-  const animator = animators[animKey];
+function clearTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+}
 
-  // HARD STOP: if busy (punching, kicking, etc.), can't move
-  if (!animator || animator.isBusy()) {
-    return;
-  }
-
-  const currentLeft = parseInt(wrap.style.left || '0');
-  const newLeft = Math.max(-120, Math.min(120, currentLeft + distance));
-  wrap.style.left = newLeft + 'px';
-  wrap.style.position = 'relative';
-
-  // Play walk animation
-  if (fightState.roundActive && animator.current !== 'walk') {
-    animator.play('walk');
+function updateTimerDisplay() {
+  const el = document.getElementById('timer');
+  if (el) {
+    el.textContent = countdown;
+    el.style.color = countdown <= 10 ? '#FF4444' : '';
   }
 }
 
-function stopMoving(player) {
-  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
-  const animator = animators[animKey];
-
-  // Only return to idle if walking and NOT busy
-  setTimeout(() => {
-    if (animator && animator.current === 'walk' && !animator.isBusy()) {
-      animator.play('idle');
-    }
-  }, 200);
+function timeOut() {
+  clearTimer();
+  if (p1.hp > p2.hp) endRound('p1');
+  else if (p2.hp > p1.hp) endRound('p2');
+  else endRound('draw');
 }
 
-function jumpPlayer(player) {
-  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
-  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
-  const animator = animators[animKey];
+// ─── Hit detection ────────────────────────────────────────────
+function checkHits() {
+  if (gameState !== 'fighting') return;
 
-  // HARD STOP: if busy, can't jump
-  if (!animator || animator.isBusy()) {
-    return;
-  }
+  [{ attacker: p1, defender: p2 }, { attacker: p2, defender: p1 }].forEach(({ attacker, defender }) => {
+    if (!attacker.attackActiveThisFrame()) return;
+    const box = attacker.getAttackBox(attacker._attackType);
+    if (defender.overlaps(box)) {
+      attacker._hitLanded = true;
+      const dmg = defender.receiveHit(attacker.charData.moves[attacker._attackType]);
 
-  animator.play('jump', () => {
-    if (animator && fightState.roundActive && !animator.isBusy()) {
-      animator.play('idle');
+      // Combo counter
+      attacker.comboCount++;
+      attacker.comboTimer = 60;
+      const comboWrap = attacker.comboWrapEl;
+      const comboCount = attacker.comboCountEl;
+      if (comboWrap && comboCount) {
+        comboCount.textContent = attacker.comboCount;
+        comboWrap.classList.add('active');
+      }
+
+      // Super meter for attacker
+      attacker.superMeter = Math.min(SUPER_MAX, attacker.superMeter + SUPER_PER_HIT);
+      attacker.syncHUD();
+
+      // Screen shake
+      screenShake(attacker._attackType === 'special' ? 10 : 4);
+
+      // Check KO
+      if (defender.hp <= 0) {
+        defender.hp = 0;
+        defender.syncHUD();
+        defender.state = 'ko';
+        const winner = attacker === p1 ? 'p1' : 'p2';
+        const perfect = defender.hp === HP_MAX; // never hit
+        setTimeout(() => endRound(winner, perfect), 400);
+      }
     }
   });
-
-  // Visual jump - slow, floaty
-  wrap.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-  const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
-  const currentLeft = wrap.style.left || '0';
-  wrap.style.transform = baseTransform + ' translateY(-60px)';
-  wrap.style.left = currentLeft;
-
-  setTimeout(() => {
-    wrap.style.transition = 'transform 0.7s cubic-bezier(0.4, 0, 0.6, 1)';
-    wrap.style.transform = baseTransform + ' translateY(0)';
-    wrap.style.left = currentLeft;
-  }, 800);
 }
 
-function crouchPlayer(player) {
-  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
-  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
-  const animator = animators[animKey];
+// ─── Round end ────────────────────────────────────────────────
+function endRound(winner, perfect = false) {
+  if (gameState === 'round_end' || gameState === 'game_end') return;
+  gameState = 'round_end';
+  clearTimer();
 
-  // HARD STOP: if busy, can't crouch
-  if (!animator || animator.isBusy()) {
-    return;
-  }
-
-  animator.play('crouch');
-
-  // Visual crouch
-  wrap.style.transition = 'transform 0.4s ease-out';
-  const baseTransform = player === 'p2' ? 'scaleX(-1)' : '';
-  const currentLeft = wrap.style.left || '0';
-  wrap.style.transform = baseTransform + ' scaleY(0.72) translateY(35px)';
-  wrap.style.left = currentLeft;
-
-  // Auto-release after 900ms
-  setTimeout(() => {
-    wrap.style.transition = 'transform 0.5s ease-out';
-    wrap.style.transform = baseTransform + ' scaleY(1) translateY(0)';
-    wrap.style.left = currentLeft;
-    if (animator && fightState.roundActive && !animator.isBusy()) {
-      animator.play('idle');
-    }
-  }, 900);
-}
-
-/* ════════════════════════════════════════════
-   COMBAT
-════════════════════════════════════════════ */
-function damage(target, amount, isCombo = false) {
-  if (!fightState.roundActive) return;
-
-  const victim = target === 'p1' ? fightState.p1 : fightState.p2;
-  const attacker = target === 'p1' ? fightState.p2 : fightState.p1;
-
-  victim.health = Math.max(0, victim.health - amount);
-  attacker.super = Math.min(100, attacker.super + amount * 0.8);
-
-  if (isCombo) {
-    attacker.combo++;
-    showCombo(attacker === fightState.p1 ? 'p1' : 'p2', attacker.combo);
+  if (winner === 'draw') {
+    showMessage('DRAW', 'ko-message', KO_DISPLAY_TIME);
   } else {
-    attacker.combo = 1;
-    showCombo(attacker === fightState.p1 ? 'p1' : 'p2', 1);
+    if (perfect) showMessage('PERFECT!', 'perfect-message', KO_DISPLAY_TIME);
+    showMessage('K.O.', 'ko-message', KO_DISPLAY_TIME);
+    wins[winner]++;
+    updateWinDots();
   }
 
-  updateHUD();
-
-  // Flash damage on health bar
-  const bar = target === 'p1' ? els.healthP1 : els.healthP2;
-  const originalBg = bar.style.background;
-  bar.style.background = '#FFFFFF';
   setTimeout(() => {
-    bar.style.background = '';
-  }, 80);
-
-  // Screen shake on heavy hits
-  if (amount >= 15) {
-    document.body.style.transform = `translate(${Math.random()*4-2}px, ${Math.random()*4-2}px)`;
-    setTimeout(() => document.body.style.transform = '', 100);
-  }
-
-  // Check KO
-  if (victim.health <= 0) {
-    endRound(target === 'p1' ? 'p2' : 'p1');
-  }
-}
-
-function showCombo(player, count) {
-  const display = player === 'p1' ? els.comboP1 : els.comboP2;
-  const countEl = player === 'p1' ? els.comboCountP1 : els.comboCountP2;
-  countEl.textContent = count;
-  display.classList.add('active');
-
-  clearTimeout(fightState.comboTimer);
-  fightState.comboTimer = setTimeout(() => {
-    hideCombos();
-    fightState.p1.combo = 0;
-    fightState.p2.combo = 0;
-  }, 2000);
-}
-
-function hideCombos() {
-  els.comboP1.classList.remove('active');
-  els.comboP2.classList.remove('active');
-}
-
-/* ════════════════════════════════════════════
-   HUD UPDATE
-════════════════════════════════════════════ */
-function updateHUD() {
-  els.healthP1.style.width = fightState.p1.health + '%';
-  els.healthP2.style.width = fightState.p2.health + '%';
-  els.superP1.style.width = fightState.p1.super + '%';
-  els.superP2.style.width = fightState.p2.super + '%';
-
-  els.healthP1.classList.toggle('danger', fightState.p1.health < 20);
-  els.healthP2.classList.toggle('danger', fightState.p2.health < 20);
+    const needed = Math.ceil(totalRounds / 2);
+    if (wins.p1 >= needed || wins.p2 >= needed) {
+      endGame(wins.p1 >= needed ? 'p1' : 'p2');
+    } else {
+      currentRound++;
+      startRound();
+    }
+  }, BETWEEN_ROUND);
 }
 
 function updateWinDots() {
-  const p1Dots = els.winsP1.querySelectorAll('.win-dot');
-  const p2Dots = els.winsP2.querySelectorAll('.win-dot');
-
-  p1Dots.forEach((dot, i) => dot.classList.toggle('active', i < fightState.p1.wins));
-  p2Dots.forEach((dot, i) => dot.classList.toggle('active', i < fightState.p2.wins));
-}
-
-/* ════════════════════════════════════════════
-   PAUSE SYSTEM
-════════════════════════════════════════════ */
-function togglePause() {
-  fightState.paused = !fightState.paused;
-  els.pauseMenu.classList.toggle('active', fightState.paused);
-}
-
-/* ════════════════════════════════════════════
-   CONTROLS
-════════════════════════════════════════════ */
-const keys = {};
-
-document.addEventListener('keydown', e => {
-  keys[e.key] = true;
-
-  if (e.key === 'Escape') {
-    e.preventDefault();
-    togglePause();
-    return;
-  }
-
-  if (fightState.paused || !fightState.roundActive) return;
-
-  // P1 controls — WASD to move, ZXCV to attack
-  if (e.key === 'z' || e.key === 'Z') {
-    e.preventDefault();
-    performAttack('p1', 'punch', 8);
-  }
-  if (e.key === 'x' || e.key === 'X') {
-    e.preventDefault();
-    performAttack('p1', 'kick', 12);
-  }
-  if (e.key === 'c' || e.key === 'C') {
-    e.preventDefault();
-    performAttack('p1', 'block', 0);
-  }
-  if (e.key === 'v' || e.key === 'V') {
-    e.preventDefault();
-    if (fightState.p1.super >= 50) {
-      performAttack('p1', 'special', 25);
-      fightState.p1.super = 0;
-      updateHUD();
-    }
-  }
-  // Movement: A/D or Arrow keys
-  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-    e.preventDefault();
-    movePlayer('p1', -6);
-  }
-  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-    e.preventDefault();
-    movePlayer('p1', 6);
-  }
-  if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-    e.preventDefault();
-    jumpPlayer('p1');
-  }
-  if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-    e.preventDefault();
-    crouchPlayer('p1');
-  }
-
-  // P2 controls — J/L to move, U/O/P/; to attack
-  if (e.key === 'u' || e.key === 'U') {
-    e.preventDefault();
-    performAttack('p2', 'punch', 8);
-  }
-  if (e.key === 'i' || e.key === 'I') {
-    e.preventDefault();
-    performAttack('p2', 'kick', 12);
-  }
-  if (e.key === 'o' || e.key === 'O') {
-    e.preventDefault();
-    performAttack('p2', 'block', 0);
-  }
-  if (e.key === 'p' || e.key === 'P') {
-    e.preventDefault();
-    if (fightState.p2.super >= 50) {
-      performAttack('p2', 'special', 25);
-      fightState.p2.super = 0;
-      updateHUD();
-    }
-  }
-  // P2 Movement
-  if (e.key === 'j' || e.key === 'J') {
-    e.preventDefault();
-    movePlayer('p2', -6);
-  }
-  if (e.key === 'l' || e.key === 'L') {
-    e.preventDefault();
-    movePlayer('p2', 6);
-  }
-  if (e.key === 'i' || e.key === 'I') {
-    // Already used for kick above, skip
-  }
-  if (e.key === 'k' || e.key === 'K') {
-    e.preventDefault();
-    crouchPlayer('p2');
-  }
-});
-
-document.addEventListener('keyup', e => {
-  keys[e.key] = false;
-
-  // Stop walk animation when movement keys are released
-  if (['a','A','d','D','ArrowLeft','ArrowRight'].includes(e.key)) {
-    stopMoving('p1');
-  }
-  if (['j','J','l','L'].includes(e.key)) {
-    stopMoving('p2');
-  }
-});
-
-function performAttack(player, type, damageAmount) {
-  const target = player === 'p1' ? 'p2' : 'p1';
-  const wrap = player === 'p1' ? els.spriteP1Wrap : els.spriteP2Wrap;
-  const targetWrap = player === 'p1' ? els.spriteP2Wrap : els.spriteP1Wrap;
-  const animKey = player === 'p1' ? 'p1Fight' : 'p2Fight';
-  const animator = animators[animKey];
-
-  // HARD COOLDOWN: if busy, do NOTHING
-  if (!animator || animator.isBusy()) {
-    return;
-  }
-
-  // Visual attack lunge
-  if (type !== 'block') {
-    wrap.classList.add('attacking');
-    setTimeout(() => wrap.classList.remove('attacking'), 700);
-  }
-
-  // Play animation - when done, auto-return to idle
-  animator.play(type, () => {
-    if (animator && fightState.roundActive && !animator.isBusy()) {
-      animator.play('idle');
-    }
+  ['p1','p2'].forEach(pid => {
+    const el = document.getElementById(`wins-${pid}`);
+    if (!el) return;
+    const dots = el.querySelectorAll('.win-dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i < wins[pid]));
   });
+}
 
-  // Target flinch
-  if (damageAmount > 0) {
-    targetWrap.style.transition = 'transform 0.2s';
-    targetWrap.style.transform = player === 'p1' 
-      ? 'scaleX(-1) translateX(-25px)' 
-      : 'translateX(-25px)';
-    setTimeout(() => {
-      targetWrap.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)';
-      targetWrap.style.transform = player === 'p1' ? 'scaleX(-1)' : '';
-    }, 400);
-  }
+// ─── Game end ─────────────────────────────────────────────────
+function endGame(winner) {
+  gameState = 'game_end';
+  clearTimer();
 
-  // Apply damage
-  if (damageAmount > 0) {
-    setTimeout(() => {
-      damage(target, damageAmount, true);
-    }, 450);
+  const char = winner === 'p1' ? p1.charData : p2.charData;
+  const msg  = winner === 'p1' ? `${char.name} WINS!` : `${char.name} WINS!`;
+
+  showMessage(msg, 'ko-message', 99999);
+
+  // Show return overlay after a beat
+  setTimeout(() => {
+    const layer = document.getElementById('message-layer');
+    if (!layer) return;
+    const div = document.createElement('div');
+    div.style.cssText = `position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+      font-size:8px;color:var(--gold-d);letter-spacing:2px;text-align:center;`;
+    div.innerHTML = `<div style="margin-bottom:8px">${char.nameAr}</div>
+      <a href="index.html" style="color:var(--gold-l);text-decoration:none">PRESS Z — MAIN MENU</a>`;
+    layer.appendChild(div);
+  }, 2000);
+}
+
+// ─── Screen shake ─────────────────────────────────────────────
+let shakeFrames = 0, shakeMag = 0;
+function screenShake(mag) { shakeFrames = 8; shakeMag = mag; }
+function applyShake(el) {
+  if (shakeFrames > 0) {
+    shakeFrames--;
+    const ox = (Math.random() - 0.5) * shakeMag;
+    const oy = (Math.random() - 0.5) * shakeMag;
+    el.style.transform = `translate(${ox}px,${oy}px)`;
+  } else {
+    el.style.transform = '';
   }
 }
 
-/* ════════════════════════════════════════════
-   PAUSE MENU BUTTONS
-════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  const resumeBtn = document.getElementById('resume-btn');
-  const restartBtn = document.getElementById('restart-btn');
+// ─── Message overlay ──────────────────────────────────────────
+function showMessage(text, cssClass, duration) {
+  const layer = document.getElementById('message-layer');
+  if (!layer) return;
+  // Remove existing same-class messages
+  layer.querySelectorAll('.' + cssClass).forEach(e => e.remove());
 
-  if (resumeBtn) {
-    resumeBtn.addEventListener('click', () => togglePause());
+  const el = document.createElement('div');
+  el.className = cssClass;
+  el.textContent = text;
+  layer.appendChild(el);
+
+  if (duration < 99999) {
+    setTimeout(() => {
+      el.classList.add('fade');
+      setTimeout(() => el.remove(), 600);
+    }, duration);
+  }
+}
+
+// ─── Pause ────────────────────────────────────────────────────
+let prevState = 'fighting';
+function togglePause() {
+  const overlay = document.getElementById('pause-menu');
+  if (!overlay) return;
+  if (gameState === 'paused') {
+    gameState = prevState;
+    overlay.classList.remove('active');
+  } else if (gameState === 'fighting') {
+    prevState = gameState;
+    gameState = 'paused';
+    overlay.classList.add('active');
+  }
+}
+
+document.getElementById('resume-btn')?.addEventListener('click', togglePause);
+document.getElementById('restart-btn')?.addEventListener('click', () => {
+  const overlay = document.getElementById('pause-menu');
+  overlay?.classList.remove('active');
+  wins.p1 = 0; wins.p2 = 0;
+  currentRound = 1;
+  initFighters();
+  startRound();
+});
+
+// ─── Main Loop ────────────────────────────────────────────────
+const stageEl = document.querySelector('.stage-area');
+
+function gameLoop() {
+  animFrameId = requestAnimationFrame(gameLoop);
+
+  if (gameState === 'paused' || gameState === 'intro' ||
+      gameState === 'round_end' || gameState === 'game_end') {
+    // Still render fighters but don't update combat
+    if (p1) p1._syncSprite();
+    if (p2) p2._syncSprite();
+    if (stageEl) applyShake(stageEl);
+    return;
   }
 
-  if (restartBtn) {
-    restartBtn.addEventListener('click', () => {
-      togglePause();
-      resetMatch();
-    });
-  }
+  if (gameState !== 'fighting') return;
 
-  // Load stage from URL params
-  const params = new URLSearchParams(window.location.search);
-  const stageKey = params.get('stage') || 'djemaa';
-  const stage = STAGES[stageKey] || STAGES.djemaa;
+  p1.update(p2, keysDown);
+  p2.update(p1, keysDown);
+  checkHits();
 
-  const stageBgImg = document.getElementById('stage-bg-img');
-  if (stageBgImg && stageKey) {
-    stageBgImg.src = 'assets/stages/' + stageKey + '.png';
-  }
+  if (stageEl) applyShake(stageEl);
+}
 
-  if (els.stageName) els.stageName.textContent = stage.name;
-  if (els.stageAr) els.stageAr.textContent = stage.ar;
+// ─── Boot ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Load stage background from config
+  const cfg = { ...FightConfig.defaults, ...FightConfig.load() };
+  const stageBg = document.getElementById('stage-bg-img');
+  if (stageBg) stageBg.src = `assets/stages/${cfg.stage || 'djemaa'}.png`;
 
-  // Init sprite animators
-  if (els.spriteP1) {
-    animators.p1Fight = new SpriteAnimator(els.spriteP1, ANIMATIONS.issam);
-    animators.p1Fight.play('idle');
-  }
-  if (els.spriteP2) {
-    animators.p2Fight = new SpriteAnimator(els.spriteP2, ANIMATIONS.issam);
-    animators.p2Fight.play('idle');
-  }
+  const STAGE_NAMES = {
+    djemaa:      ['DJEMAA EL-FNA',   'ساحة جامع الفنا'],
+    fes:         ['MEDINA OF FES',   'مدينة فاس'],
+    tangier:     ['KASBAH TANGIER',  'طنجة'],
+    agadir:      ['AGADIR BEACH',    'أكادير'],
+    chefchaouen: ['CHEFCHAOUEN',     'شفشاون'],
+    atlas:       ['ATLAS MOUNTAINS', 'جبال الأطلس'],
+  };
+  const [stageName, stageAr] = STAGE_NAMES[cfg.stage] || STAGE_NAMES.djemaa;
+  const snEl = document.getElementById('stage-name-fight');
+  const saEl = document.getElementById('stage-ar-fight');
+  if (snEl) snEl.textContent = stageName;
+  if (saEl) saEl.textContent = stageAr;
 
-  // Start first round after brief delay
-  setTimeout(() => {
-    startRound();
-  }, 800);
+  initFighters();
+  startRound();
+  gameLoop();
 });
