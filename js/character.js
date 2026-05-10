@@ -170,9 +170,8 @@ const ROSTER = [
     },
     stats: { speed: 9, power: 7, defense: 6, special: 10 },
     moves: {
-      punch:   { startup: 3,  active: 3, recovery: 7,  damage: 9,  hitstun: 13, kb: 5  },
-      kick:    { startup: 6,  active: 4, recovery: 11, damage: 13, hitstun: 18, kb: 8  },
-      special: { startup: 7,  active: 7, recovery: 16, damage: 22, hitstun: 28, kb: 15 },
+      punch:   { startup: 2,  active: 3, recovery: 5,  damage: 8},
+      kick:    { startup: 4,  active: 4, recovery: 8, damage: 12 },
     },
     superName: 'BLUE MIST',
     superNameAr: 'الضباب الأزرق',

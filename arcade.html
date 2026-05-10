@@ -24,17 +24,6 @@
 
       <!-- Player Character Panel (1254x1254 ratio) -->
       <div class="arcade-hero-section">
-        <div class="arcade-hero-card">
-          <div class="arcade-hero-frame">
-            <img id="arcade-hero-img" src="assets/characters/issam/idle.png" alt="ISSAM" />
-          </div>
-          <div class="arcade-hero-info">
-            <div class="ah-name">ISSAM</div>
-            <div class="ah-name-ar">عصام</div>
-            <div class="ah-origin">CASABLANCA</div>
-          </div>
-        </div>
-
         <div class="arcade-vs-divider">
           <div class="vs-diamond">VS</div>
           <div class="vs-line"></div>
@@ -80,6 +69,21 @@
     </div>
   </div>
 
-  <script src="js/main.js"></script>
+  <scrip src="js/main.js">
+      <script>
+    // Wait for the DOM to load
+    document.addEventListener('DOMContentLoaded', () => {
+      const startBtn = document.querySelector('.start-btn');
+      
+      if (startBtn) {
+        startBtn.addEventListener('click', () => {
+          // Here we could save the selected character/stage to localStorage first
+          // But for now, let's just get the damn game running!
+          window.location.href = 'fight.html';
+        });
+      }
+    });
+    
+  </script>
 </body>
 </html>

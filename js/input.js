@@ -15,6 +15,8 @@ class InputSystem {
     this.setupKeyboardInput();
     this.setupGamepadInput();
     this.setupTouchInput();
+    this.buffer = [];
+    this.bufferWindow = 20;
   }
 
   /**
@@ -30,10 +32,8 @@ class InputSystem {
    */
   onKeyDown(event) {
     const key = event.key.toLowerCase();
-    if (!this.keys[key]) {
-      this.keys[key] = true;
-      Utils.Event.emit('input:keydown', { key });
-    }
+      this.buffer.push({ key, time: Date.now() });
+      if (this.buffer.length > 10) this.buffer.shift();
   }
 
   /**
