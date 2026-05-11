@@ -198,3 +198,18 @@ body::after {
   background: #00d9ff;
   transform: scale(1.1) rotate(-2deg);
 }
+/* Blocking pose */
+.fighter-sprite-arena.blocking {
+  filter: brightness(0.85);
+  border: 2px solid var(--gold-d);
+}
+
+/* Hit reaction */
+.fighter-sprite-arena.hit {
+  animation: hit-flash 0.2s ease-out;
+}
+
+@keyframes hit-flash {
+  0% { filter: brightness(1.5) hue-rotate(10deg); }
+  100% { filter: brightness(1); }
+}
