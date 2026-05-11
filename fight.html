@@ -544,17 +544,16 @@
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      console.log("🎮 Fight page initializing...");
+      console.log("Fight page initializing...");
 
-      const p1Id = localStorage.getItem('p1_selected_arcade') || 'issam';
-      const p2Id = localStorage.getItem('p2_selected_arcade') || 'issam';
+      const p1Id = localStorage.getItem('p1_selected_arcade') || 'player 1';
+      const p2Id = localStorage.getItem('p2_selected_arcade') || 'player 2';
 
       window.selectedP1Id = p1Id.toLowerCase();
       window.selectedP2Id = p2Id.toLowerCase();
 
       console.log(`%cLoaded fighters → P1: ${p1Id} | P2: ${p2Id}`, 'color:lime; font-weight:bold');
 
-      // Start the fight
       if (typeof initFighters === 'function') {
         setTimeout(initFighters, 100);
       }

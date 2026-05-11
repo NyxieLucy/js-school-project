@@ -1,24 +1,17 @@
 // ═══════════════════════════════════════════════════════════
-//  SOUK BRAWL — fight.js (Clean Version)
+//  SOUK BRAWL — fight.js (Clean Integrated Version)
 // ═══════════════════════════════════════════════════════════
 
 'use strict';
 
-// Use the ROSTER from character.js (the full one with multiple characters)
-const ROSTER = window.ROSTER || (typeof ROSTER !== 'undefined' ? ROSTER : [
-  {
-    id: 'issam', name: 'ISSAM', nameAr: 'عصام',
-    stats: { speed: 6, power: 7, defense: 5 },
-    moves: {
-      punch: { name: 'Jab', damage: 8, hitstun: 12, kb: 4 },
-      kick:  { name: 'Roundhouse', damage: 12, hitstun: 16, kb: 7 },
-      special: { name: 'Souk Storm', damage: 25, hitstun: 30, kb: 12 }
-    },
-    superName: 'SOUK STORM'
-  }
-]);
+// Use ROSTER from character.js (has multiple characters)
+const ROSTER = window.ROSTER || (typeof ROSTER !== 'undefined' ? ROSTER : [{
+  id: 'issam', name: 'ISSAM', nameAr: 'عصام',
+  stats: { speed: 6, power: 7, defense: 5 },
+  moves: { punch: {}, kick: {}, special: {} }
+}]);
 
-// Use FightConfig from character.js or main config
+// Use FightConfig from character.js
 const FightConfig = window.FightConfig || {
   defaults: {
     mode: 'arcade',
@@ -35,7 +28,7 @@ const FightConfig = window.FightConfig || {
   }
 };
 
-// Sprite helper - use the one from character.js if available
+// Sprite helper (use the good one from character.js)
 const getSpriteWithFallback = window.getSpriteWithFallback || function(charId, stateName) {
   return `assets/characters/${charId}/${stateName}.png`;
 };
@@ -338,8 +331,10 @@ class Fighter {
     if (this.actionFrame > 0 && (this.state === 'hurt' || this.state === 'block')) return;
     if (this.actionFrame > 0 && ['punch','kick','special'].includes(this.state)) return;
 
-    const K = GameConfig?.KEYS || KEYS || { LEFT: 'arrowleft', RIGHT: 'arrowright', UP: 'arrowup', DOWN: 'arrowdown', SELECT: 'z', BACK: 'x', BLOCK: 'c', SPECIAL: 'v' };
-
+    const K = GameConfig?.KEYS || {
+      LEFT: 'arrowleft', RIGHT: 'arrowright', UP: 'arrowup', 
+      DOWN: 'arrowdown', SELECT: 'z', BACK: 'x', BLOCK: 'c', SPECIAL: 'v'
+    };
     this.isBlocking = inputSys.isKeyPressed(K.BLOCK) && this.onGround;
     if (this.isBlocking) {
       this.state = 'block';
