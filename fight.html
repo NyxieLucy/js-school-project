@@ -1,560 +1,654 @@
 <!DOCTYPE html>
-< lang="en">
+<html lang="en">
 <head>
-  <meta charset= "UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SOUK BRAWL — FIGHT!</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
-  <style>
-    .fight-screen {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      z-index: 2;
-      width: 100%;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOUK BRAWL — FIGHT!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<style>
+.fight-screen {
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+position: relative;
+z-index: 2;
+width: 100%;
+}
 
-    .fight-hud {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 900px;
-      padding: 12px 16px;
-      gap: 12px;
-      position: relative;
-      z-index: 10;
-    }
+.fight-hud {
+display: flex;
+align-items: center;
+justify-content: space-between;
+width: 100%;
+max-width: 900px;
+padding: 12px 16px;
+gap: 12px;
+position: relative;
+z-index: 10;
+}
 
-    .hud-side {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 1;
-    }
-    .hud-side.right { align-items: flex-end; }
+.hud-side {
+display: flex;
+flex-direction: column;
+gap: 4px;
+flex: 1;
+}
 
-    .hud-name {
-      font-size: 10px;
-      color: var(--gold-l);
-      letter-spacing: 2px;
-    }
-    .hud-name-ar {
-      font-size: 7px;
-      color: var(--teal-l);
-    }
+.hud-side.right { align-items: flex-end; }
 
-    .health-bar-wrap {
-      width: 100%;
-      height: 18px;
-      background: var(--panel);
-      border: 2px solid var(--gold-dim);
-      position: relative;
-      overflow: hidden;
-      clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
-    }
+.hud-name {
+font-size: 10px;
+color: var(--gold-l);
+letter-spacing: 2px;
+}
 
-    .health-bar {
-      height: 100%;
-      background: var(--crimson-ll);
-      transition: width 0.25s ease-out;
-      position: relative;
-    }
-    .health-bar::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      background: rgba(255,255,255,0.3);
-    }
-    .health-bar.danger {
-      background: #FF3030;
-      animation: danger-pulse 0.5s ease-in-out infinite alternate;
-    }
-    @keyframes danger-pulse {
-      from { opacity: 1; }
-      to   { opacity: 0.6; }
-    }
+.hud-name-ar {
+font-size: 7px;
+color: var(--teal-l);
+}
 
-    .hud-side.right .health-bar-wrap { border-color: var(--teal); }
-    .hud-side.right .health-bar { background: var(--teal-l); }
-    .hud-side.right .health-bar.danger { background: #30FFFF; }
+.health-bar-wrap {
+width: 100%;
+height: 18px;
+background: var(--panel);
+border: 2px solid var(--gold-dim);
+position: relative;
+overflow: hidden;
+clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+}
 
-    .hud-timer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      min-width: 70px;
-    }
-    .timer-value {
-      font-size: 22px;
-      color: var(--gold-l);
-      letter-spacing: 2px;
-      text-shadow: 2px 2px 0 var(--crimson);
-    }
-    .timer-label {
-      font-size: 6px;
-      color: var(--gold-d);
-      letter-spacing: 2px;
-    }
+.health-bar {
+height: 100%;
+background: var(--crimson-ll);
+transition: width 0.25s ease-out;
+position: relative;
+}
 
-    .round-indicator {
-      position: absolute;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 10px;
-      color: var(--gold-d);
-      letter-spacing: 4px;
-      z-index: 10;
-      text-align: center;
-    }
-    .round-indicator .round-ar {
-      font-size: 8px;
-      color: var(--teal);
-      margin-top: 2px;
-    }
+.health-bar::after {
+content: '';
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 4px;
+background: rgba(255,255,255,0.3);
+}
 
-    .stage-area {
-      position: relative;
-      width: 100%;
-      max-width: 900px;
-      flex: 1;
-      min-height: 420px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      overflow: hidden;
-      border-top: 3px solid var(--gold-dim);
-      border-bottom: 3px solid var(--gold-dim);
-    }
+.health-bar.danger {
+background: #FF3030;
+animation: danger-pulse 0.5s ease-in-out infinite alternate;
+}
 
-    .stage-bg-img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center bottom;
-      image-rendering: pixelated;
-      z-index: 0;
-    }
+@keyframes danger-pulse {
+from { opacity: 1; }
+to { opacity: 0.6; }
+}
 
-    .stage-floor-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0; right: 0;
-      height: 100px;
-      background: linear-gradient(to top, rgba(8,4,4,0.9) 0%, transparent 100%);
-      z-index: 1;
-      pointer-events: none;
-    }
+.hud-side.right .health-bar-wrap { border-color: var(--teal); }
 
-    .stage-name-overlay {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      z-index: 4;
-      background: rgba(8, 4, 4, 0.7);
-      padding: 6px 16px;
-      border: 1px solid var(--gold-dim);
-    }
-    .stage-name-text {
-      font-size: 8px;
-      color: var(--gold-d);
-      letter-spacing: 3px;
-    }
-    .stage-name-ar {
-      font-size: 7px;
-      color: var(--teal);
-      margin-top: 2px;
-    }
+.hud-side.right .health-bar { background: var(--teal-l); }
 
-    .fighter-arena {
-      position: relative;
-      width: 100%;
-      max-width: 800px;
-      height: 280px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      padding: 0 100px 25px;
-      z-index: 5;
-    }
+.hud-side.right .health-bar.danger { background: #30FFFF; }
 
-    .arena-fighter {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-    }
-    .arena-fighter.left { align-items: flex-start; }
-    .arena-fighter.right { align-items: flex-end; }
+.hud-timer {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 4px;
+min-width: 70px;
+}
 
-    .fighter-sprite-arena {
-      transform: skewX(-5deg); /* Apply aggressive arcade tilt */
-      width: 220px;
-      height: 220px;
-      image-rendering: pixelated;
-      position: relative;
-      transition: transform 0.25s ease-out;
-    }
+.timer-value {
+font-size: 22px;
+color: var(--gold-l);
+letter-spacing: 2px;
+text-shadow: 2px 2px 0 var(--crimson);
+}
 
-    .fighter-sprite-arena.attacking {
-      transform: translateX(35px);
-    }
-    .arena-fighter.right .fighter-sprite-arena.attacking {
-      transform: translateX(-35px) scaleX(-1);
-    }
+.timer-label {
+font-size: 6px;
+color: var(--gold-d);
+letter-spacing: 2px;
+}
 
-    .fighter-sprite-arena img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      object-position: bottom center;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
+.round-indicator {
+position: absolute;
+top: 70px;
+left: 50%;
+transform: translateX(-50%);
+font-size: 10px;
+color: var(--gold-d);
+letter-spacing: 4px;
+z-index: 10;
+text-align: center;
+}
 
-    .fighter-shadow-arena {
-      position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 110px;
-      height: 18px;
-      background: rgba(0,0,0,0.5);
-      border-radius: 50%;
-      filter: blur(4px);
-    }
+.round-indicator .round-ar {
+font-size: 8px;
+color: var(--teal);
+margin-top: 2px;
+}
 
+.stage-area {
+position: relative;
+width: 100%;
+max-width: 900px;
+flex: 1;
+min-height: 420px;
+display: flex;
+align-items: flex-end;
+justify-content: center;
+overflow: hidden;
+border-top: 3px solid var(--gold-dim);
+border-bottom: 3px solid var(--gold-dim);
+}
 
-    .super-meter-wrap {
-      width: 100%;
-      height: 8px;
-      background: var(--panel);
-      border: 1px solid var(--gold-dim);
-      margin-top: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-    .super-meter {
-      height: 100%;
-      background: var(--gold-l);
-      width: 0%;
-      transition: width 0.2s;
-      box-shadow: 0 0 6px var(--gold-l);
-    }
-    .super-label {
-      font-size: 6px;
-      color: var(--gold-d);
-      letter-spacing: 1px;
-      margin-top: 2px;
-    }
+.stage-bg-img {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+object-fit: cover;
+object-position: center bottom;
+image-rendering: pixelated;
+z-index: 0;
+}
 
-    .combo-display {
-      position: absolute;
-      top: 100px;
-      font-size: 14px;
-      color: var(--gold-l);
-      letter-spacing: 2px;
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 0.3s;
-      text-align: center;
-    }
-    .combo-display.active { opacity: 1; }
-    .combo-display.left { left: 20px; }
-    .combo-display.right { right: 20px; }
-    .combo-count {
-      font-size: 28px;
-      color: var(--crimson-ll);
-      text-shadow: 2px 2px 0 var(--crimson);
-      line-height: 1;
-    }
-    .combo-hits {
-      font-size: 10px;
-      color: var(--gold-d);
-    }
+.stage-floor-overlay {
+position: absolute;
+bottom: 0;
+left: 0; right: 0;
+height: 100px;
+background: linear-gradient(to top, rgba(8,4,4,0.9) 0%, transparent 100%);
+z-index: 1;
+pointer-events: none;
+}
 
-    .fight-message {
-      position: absolute;
-      top: 45%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 52px;
-      color: var(--crimson-ll);
-      text-shadow:
-        4px 4px 0 var(--crimson),
-        8px 8px 0 #1A0000;
-      letter-spacing: 6px;
-      z-index: 20;
-      animation: fight-zoom 0.8s ease-out forwards;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-    @keyframes fight-zoom {
-      from { transform: translate(-50%, -50%) scale(3); opacity: 0; }
-      to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-    .fight-message.fade {
-      animation: fight-fade 0.5s ease-in forwards;
-    }
-    @keyframes fight-fade {
-      to { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
-    }
+.stage-name-overlay {
+position: absolute;
+top: 12px;
+left: 50%;
+transform: translateX(-50%);
+text-align: center;
+z-index: 4;
+background: rgba(8, 4, 4, 0.7);
+padding: 6px 16px;
+border: 1px solid var(--gold-dim);
+}
 
-    .ko-message {
-      position: absolute;
-      top: 45%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 72px;
-      color: var(--crimson-ll);
-      text-shadow:
-        4px 4px 0 var(--crimson),
-        8px 8px 0 #1A0000;
-      letter-spacing: 8px;
-      z-index: 20;
-      animation: ko-bounce 1s ease-out forwards;
-    }
-    @keyframes ko-bounce {
-      0%   { transform: translate(-50%, -50%) scale(0); }
-      50%  { transform: translate(-50%, -50%) scale(1.2); }
-      100% { transform: translate(-50%, -50%) scale(1); }
-    }
+.stage-name-text {
+font-size: 8px;
+color: var(--gold-d);
+letter-spacing: 3px;
+}
 
-    .perfect-message {
-      position: absolute;
-      top: 35%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 32px;
-      color: var(--gold-l);
-      text-shadow: 3px 3px 0 var(--gold-d);
-      letter-spacing: 4px;
-      z-index: 20;
-      animation: perfect-pop 1s ease-out forwards;
-    }
-    @keyframes perfect-pop {
-      0%   { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
-      60%  { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-    }
+.stage-name-ar {
+font-size: 7px;
+color: var(--teal);
+margin-top: 2px;
+}
 
-    .pause-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(8, 4, 4, 0.9);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      z-index: 100;
-    }
-    .pause-overlay.active { display: flex; }
+.fighter-arena {
+position: relative;
+width: 100%;
+max-width: 800px;
+height: 280px;
+display: flex;
+align-items: flex-end;
+justify-content: space-between;
+padding: 0 100px 25px;
+z-index: 5;
+}
 
-    .pause-title {
-      font-size: 24px;
-      color: var(--gold-l);
-      letter-spacing: 4px;
-      margin-bottom: 20px;
-      text-shadow: 3px 3px 0 var(--crimson);
-    }
+.arena-fighter {
+display: flex;
+flex-direction: column;
+align-items: center;
+position: relative;
+}
 
-    .pause-btn {
-      background: var(--panel);
-      border: 2px solid var(--gold-dim);
-      color: var(--silver);
-      font-family: var(--font);
-      font-size: 10px;
-      cursor: pointer;
-      padding: 12px 32px;
-      min-width: 220px;
-      text-align: center;
-      text-decoration: none;
-      transition: all 0.1s;
-      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    }
-    .pause-btn:hover {
-      border-color: var(--gold-l);
-      color: var(--gold-l);
-      background: var(--panel-l);
-    }
+.arena-fighter.left { align-items: flex-start; }
 
-    .fight-controls {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 10px;
-      font-size: 7px;
-      color: var(--gold-d);
-      letter-spacing: 1px;
-      flex-wrap: wrap;
-    }
-    .ctrl-hint {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+.arena-fighter.right { align-items: flex-end; }
 
-    .win-dots {
-      display: flex;
-      gap: 4px;
-      margin-top: 4px;
-    }
-    .win-dot {
-      width: 8px; height: 8px;
-      border: 1px solid var(--gold-dim);
-      background: transparent;
-    }
-    .win-dot.active {
-      background: var(--gold-l);
-      border-color: var(--gold-l);
-      box-shadow: 0 0 4px var(--gold-l);
-    }
-    .hud-side.right .win-dot.active {
-      background: var(--teal-l);
-      border-color: var(--teal-l);
-      box-shadow: 0 0 4px var(--teal-l);
-    }
-  </style>
+.fighter-sprite-arena {
+width: 220px;
+height: 220px;
+image-rendering: pixelated;
+position: relative;
+transition: transform 0.25s ease-out;
+}
+
+.fighter-sprite-arena.attacking {
+transform: translateX(35px);
+}
+
+.arena-fighter.right .fighter-sprite-arena.attacking {
+transform: translateX(-35px) scaleX(-1);
+}
+
+.fighter-sprite-arena img {
+width: 100%;
+height: 100%;
+object-fit: contain;
+object-position: bottom center;
+image-rendering: pixelated;
+image-rendering: crisp-edges;
+}
+
+.fighter-shadow-arena {
+position: absolute;
+bottom: -8px;
+left: 50%;
+transform: translateX(-50%);
+width: 110px;
+height: 18px;
+background: rgba(0,0,0,0.5);
+border-radius: 50%;
+filter: blur(4px);
+}
+
+.arena-fighter.right .fighter-sprite-arena {
+transform: scaleX(-1);
+}
+
+.super-meter-wrap {
+width: 100%;
+height: 8px;
+background: var(--panel);
+border: 1px solid var(--gold-dim);
+margin-top: 4px;
+position: relative;
+overflow: hidden;
+}
+
+.super-meter {
+height: 100%;
+background: var(--gold-l);
+width: 0%;
+transition: width 0.2s;
+box-shadow: 0 0 6px var(--gold-l);
+}
+
+.super-label {
+font-size: 6px;
+color: var(--gold-d);
+letter-spacing: 1px;
+margin-top: 2px;
+}
+
+.combo-display {
+position: absolute;
+top: 100px;
+font-size: 14px;
+color: var(--gold-l);
+letter-spacing: 2px;
+z-index: 10;
+opacity: 0;
+transition: opacity 0.3s;
+text-align: center;
+}
+
+.combo-display.active { opacity: 1; }
+
+.combo-display.left { left: 20px; }
+
+.combo-display.right { right: 20px; }
+
+.combo-count {
+font-size: 28px;
+color: var(--crimson-ll);
+text-shadow: 2px 2px 0 var(--crimson);
+line-height: 1;
+}
+
+.combo-hits {
+font-size: 10px;
+color: var(--gold-d);
+}
+
+.fight-message {
+position: absolute;
+top: 45%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-size: 52px;
+color: var(--crimson-ll);
+text-shadow:
+4px 4px 0 var(--crimson),
+8px 8px 0 #1A0000;
+letter-spacing: 6px;
+z-index: 20;
+animation: fight-zoom 0.8s ease-out forwards;
+pointer-events: none;
+white-space: nowrap;
+}
+
+@keyframes fight-zoom {
+from { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.fight-message.fade {
+animation: fight-fade 0.5s ease-in forwards;
+}
+
+@keyframes fight-fade {
+to { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+.ko-message {
+position: absolute;
+top: 45%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-size: 72px;
+color: var(--crimson-ll);
+text-shadow:
+4px 4px 0 var(--crimson),
+8px 8px 0 #1A0000;
+letter-spacing: 8px;
+z-index: 20;
+animation: ko-bounce 1s ease-out forwards;
+}
+
+@keyframes ko-bounce {
+0% { transform: translate(-50%, -50%) scale(0); }
+50% { transform: translate(-50%, -50%) scale(1.2); }
+100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.perfect-message {
+position: absolute;
+top: 35%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-size: 32px;
+color: var(--gold-l);
+text-shadow: 3px 3px 0 var(--gold-d);
+letter-spacing: 4px;
+z-index: 20;
+animation: perfect-pop 1s ease-out forwards;
+}
+
+@keyframes perfect-pop {
+0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+60% { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); opacity: 1; }
+100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+
+.pause-overlay {
+position: fixed;
+inset: 0;
+background: rgba(8, 4, 4, 0.9);
+display: none;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 16px;
+z-index: 100;
+}
+
+.pause-overlay.active { display: flex; }
+
+.pause-title {
+font-size: 24px;
+color: var(--gold-l);
+letter-spacing: 4px;
+margin-bottom: 20px;
+text-shadow: 3px 3px 0 var(--crimson);
+}
+
+.pause-btn {
+background: var(--panel);
+border: 2px solid var(--gold-dim);
+color: var(--silver);
+font-family: var(--font);
+font-size: 10px;
+cursor: pointer;
+padding: 12px 32px;
+min-width: 220px;
+text-align: center;
+text-decoration: none;
+transition: all 0.1s;
+clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.pause-btn:hover {
+border-color: var(--gold-l);
+color: var(--gold-l);
+background: var(--panel-l);
+}
+
+.fight-controls {
+display: flex;
+justify-content: center;
+gap: 20px;
+padding: 10px;
+font-size: 7px;
+color: var(--gold-d);
+letter-spacing: 1px;
+flex-wrap: wrap;
+}
+
+.ctrl-hint {
+display: flex;
+align-items: center;
+gap: 6px;
+}
+
+.win-dots {
+display: flex;
+gap: 4px;
+margin-top: 4px;
+}
+
+.win-dot {
+width: 8px; height: 8px;
+border: 1px solid var(--gold-dim);
+background: transparent;
+}
+
+.win-dot.active {
+background: var(--gold-l);
+border-color: var(--gold-l);
+box-shadow: 0 0 4px var(--gold-l);
+}
+
+.hud-side.right .win-dot.active {
+background: var(--teal-l);
+border-color: var(--teal-l);
+box-shadow: 0 0 4px var(--teal-l);
+}
+</style>
+
 <base target="_blank">
+
 </head>
->
 
-  <canvas id="bg-canvas"></canvas>
+<body>
 
-  <div class="fight-screen" id="fight-screen">
+<canvas id="bg-canvas"></canvas>
 
-    <div class="round-indicator" id="round-indicator">
-      <div>ROUND 1</div>
-      <div class="round-ar">الجولة الأولى</div>
-    </div>
+<div class="fight-screen" id="fight-screen">
 
-    <div class="combo-display left" id="combo-p1">
-      <div class="combo-count" id="combo-count-p1">0</div>
-      <div class="combo-hits">HITS</div>
-    </div>
-    <div class="combo-display right" id="combo-p2">
-      <div class="combo-count" id="combo-count-p2">0</div>
-      <div class="combo-hits">HITS</div>
-    </div>
+<div class="round-indicator" id="round-indicator">
 
-    <div class="fight-hud">
-      <div class="hud-side left">
-        <div class="hud-name">ISSAM</div>
-        <div class="hud-name-ar">عصام</div>
-        <div class="health-bar-wrap">
-          <div class="health-bar" id="health-p1" style="width: 100%"></div>
-        </div>
-        <div class="super-meter-wrap">
-          <div class="super-meter" id="super-p1" style="width: 0%"></div>
-        </div>
-        <div class="super-label">SUPER</div>
-        <div class="win-dots" id="wins-p1">
-          <div class="win-dot"></div>
-          <div class="win-dot"></div>
-        </div>
-      </div>
+<div>ROUND 1</div>
 
-      <div class="hud-timer">
-        <div class="timer-value" id="timer">60</div>
-        <div class="timer-label">TIME</div>
-      </div>
+<div class="round-ar">الجولة الأولى</div>
 
-      <div class="hud-side right">
-        <div class="hud-name">ISSAM</div>
-        <div class="hud-name-ar">عصام</div>
-        <div class="health-bar-wrap">
-          <div class="health-bar" id="health-p2" style="width: 100%"></div>
-        </div>
-        <div class="super-meter-wrap">
-          <div class="super-meter" id="super-p2" style="width: 0%"></div>
-        </div>
-        <div class="super-label">SUPER</div>
-        <div class="win-dots" id="wins-p2">
-          <div class="win-dot"></div>
-          <div class="win-dot"></div>
-        </div>
-      </div>
-    </div>
+</div>
 
-    <div class="stage-area" id="stage-area">
-      <img class="stage-bg-img" id="stage-bg-img" src="assets/stages/djemaa.png" alt="Stage" />
-      <div class="stage-floor-overlay"></div>
+<div class="combo-display left" id="combo-p1">
 
-      <div class="stage-name-overlay">
-        <div class="stage-name-text" id="stage-name-fight">DJEMAA EL-FNA</div>
-        <div class="stage-name-ar" id="stage-ar-fight">ساحة جامع الفنا</div>
-      </div>
+<div class="combo-count" id="combo-count-p1">0</div>
 
-      <div class="fighter-arena">
-        <div class="arena-fighter left">
-          <div class="fighter-sprite-arena" id="sprite-p1-wrap">
-            <img id="sprite-p1" src="assets/characters/issam/idle.png" alt="P1" />
-            <div class="fighter-shadow-arena"></div>
-          </div>
-        </div>
+<div class="combo-hits">HITS</div>
 
-        <div class="arena-fighter right">
-          <div class="fighter-sprite-arena" id="sprite-p2-wrap">
-            <img id="sprite-p2" src="assets/characters/issam/idle.png" alt="P2" />
-            <div class="fighter-shadow-arena"></div>
-          </div>
-        </div>
-      </div>
+</div>
 
-      <div id="message-layer"></div>
-    </div>
+<div class="combo-display right" id="combo-p2">
 
-    <div class="fight-controls">
-      <div class="ctrl-hint"><span class="key">⬆⬇⬅➡</span> MOVE</div>
-      <div class="ctrl-hint"><span class="key">Z</span> PUNCH</div>
-      <div class="ctrl-hint"><span class="key">X</span> KICK</div>
-      <div class="ctrl-hint"><span class="key">C</span> BLOCK</div>
-      <div class="ctrl-hint"><span class="key">V</span> SPECIAL</div>
-      <div class="ctrl-hint"><span class="key">ESC</span> PAUSE</div>
-    </div>
+<div class="combo-count" id="combo-count-p2">0</div>
 
-  </div>
+<div class="combo-hits">HITS</div>
 
-  <div class="pause-overlay" id="pause-menu">
-    <div class="pause-title">PAUSED</div>
-    <button class="pause-btn" id="resume-btn">RESUME</button>
-    <button class="pause-btn" id="restart-btn">RESTART</button>
-    <a href="index.html" class="pause-btn">QUIT TO MENU</a>
-  </div>
-  <script src="js/config.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/character.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/fight.js"></script>
+</div>
 
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      console.log("Fight page initializing...");
+<div class="fight-hud">
 
-      const p1Id = localStorage.getItem('p1_selected_arcade') || 'player 1';
-      const p2Id = localStorage.getItem('p2_selected_arcade') || 'player 2';
+<div class="hud-side left">
 
-      window.selectedP1Id = p1Id.toLowerCase();
-      window.selectedP2Id = p2Id.toLowerCase();
+<div class="hud-name" id="p1-name">ISSAM</div>
 
-      console.log(`%cLoaded fighters → P1: ${p1Id} | P2: ${p2Id}`, 'color:lime; font-weight:bold');
+<div class="hud-name-ar" id="p1-name-ar">عصام</div>
 
-      if (typeof initFighters === 'function') {
-        setTimeout(initFighters, 100);
-      }
-    });
-  </script>
+<div class="health-bar-wrap">
+
+<div class="health-bar" id="health-p1" style="width: 100%"></div>
+
+</div>
+
+<div class="super-meter-wrap">
+
+<div class="super-meter" id="super-p1" style="width: 0%"></div>
+
+</div>
+
+<div class="super-label">SUPER</div>
+
+<div class="win-dots" id="wins-p1">
+
+<div class="win-dot"></div>
+
+<div class="win-dot"></div>
+
+</div>
+
+</div>
+
+<div class="hud-timer">
+
+<div class="timer-value" id="timer">60</div>
+
+<div class="timer-label">TIME</div>
+
+</div>
+
+<div class="hud-side right">
+
+<div class="hud-name" id="p2-name">CHEB ARBI</div>
+
+<div class="hud-name-ar" id="p2-name-ar">الشاب العربي</div>
+
+<div class="health-bar-wrap">
+
+<div class="health-bar" id="health-p2" style="width: 100%"></div>
+
+</div>
+
+<div class="super-meter-wrap">
+
+<div class="super-meter" id="super-p2" style="width: 0%"></div>
+
+</div>
+
+<div class="super-label">SUPER</div>
+
+<div class="win-dots" id="wins-p2">
+
+<div class="win-dot"></div>
+
+<div class="win-dot"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="stage-area" id="stage-area">
+
+<img class="stage-bg-img" id="stage-bg-img" src="assets/stages/djemaa.png" alt="Stage" />
+
+<div class="stage-floor-overlay"></div>
+
+<div class="stage-name-overlay">
+
+<div class="stage-name-text" id="stage-name-fight">DJEMAA EL-FNA</div>
+
+<div class="stage-name-ar" id="stage-ar-fight">ساحة جامع الفنا</div>
+
+</div>
+
+<div class="fighter-arena">
+
+<div class="arena-fighter left">
+
+<div class="fighter-sprite-arena" id="sprite-p1-wrap">
+
+<img id="sprite-p1" src="assets/characters/issam/idle.png" alt="P1" />
+
+<div class="fighter-shadow-arena"></div>
+
+</div>
+
+</div>
+
+<div class="arena-fighter right">
+
+<div class="fighter-sprite-arena" id="sprite-p2-wrap">
+
+<img id="sprite-p2" src="assets/characters/cheb-arbi/idle.png" alt="P2" />
+
+<div class="fighter-shadow-arena"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div id="message-layer"></div>
+
+</div>
+
+<div class="fight-controls">
+
+<div class="ctrl-hint"><span class="key">⬆⬇⬅➡</span> MOVE</div>
+
+<div class="ctrl-hint"><span class="key">Z</span> PUNCH</div>
+
+<div class="ctrl-hint"><span class="key">X</span> KICK</div>
+
+<div class="ctrl-hint"><span class="key">C</span> BLOCK</div>
+
+<div class="ctrl-hint"><span class="key">V</span> SPECIAL</div>
+
+<div class="ctrl-hint"><span class="key">ESC</span> PAUSE</div>
+
+</div>
+
+</div>
+
+<div class="pause-overlay" id="pause-menu">
+
+<div class="pause-title">PAUSED</div>
+
+<button class="pause-btn" id="resume-btn">RESUME</button>
+
+<button class="pause-btn" id="restart-btn">RESTART</button>
+
+<a href="index.html" class="pause-btn">QUIT TO MENU</a>
+
+</div>
+
+<script src="js/main.js"></script>
+
+<script src="js/fight.js"></script>
+
 </body>
+
 </html>
