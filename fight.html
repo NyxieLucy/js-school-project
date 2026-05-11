@@ -645,10 +645,12 @@ box-shadow: 0 0 4px var(--teal-l);
 
 </div>
 
-<script src="js/main.js"></script>
 
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>      <!-- Utils defined here -->
+<script src="js/character.js"></script>
+<script src="js/main.js"></script>       <!-- But main.js tries to use Utils immediately -->
 <script src="js/fight.js"></script>
-
 </body>
 
 </html>

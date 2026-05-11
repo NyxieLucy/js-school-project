@@ -186,17 +186,16 @@ class SoukBrawl {
 }
 
 // Initialize game when DOM is ready
+// NEW — defer until all scripts parsed
 let game = null;
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    game = new SoukBrawl();
-    window.game = game;
-  });
-} else {
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof Utils === 'undefined') {
+    console.error('Utils not loaded! Check script order.');
+    return;
+  }
   game = new SoukBrawl();
   window.game = game;
-}
+});
 
 /**
  * Global error handler
