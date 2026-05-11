@@ -37,13 +37,14 @@ const ANIMATIONS = {
 // Walk cycle for each character
 const WALK_CYCLES = {
   issam: ['walking1', 'walking2', 'walking3', 'walking4'],
-  'cheb-arbi': ['walking', 'walking', 'walking', 'walking'] // adjust if more frames exist
+  'cheb-arbi': ['walking', 'walking', 'walking', 'walking']
 };
 
 // ─── Fighter State Machine ──────────────────────────────────────
 const FighterState = {
   IDLE: 'idle',
   WALKING: 'walking',
+  JUMPING: 'jumping',
   BLOCKING: 'blocking',
   PUNCHING: 'punching',
   KICKING: 'kicking',
@@ -60,13 +61,17 @@ class Fighter {
     this.name = name;
     this.side = side; // 'left' or 'right'
     this.character = character;
-    
+
     // Position
     this.x = side === 'left' ? 150 : GAME_WIDTH - 150;
     this.y = 0;
     this.minX = 50;
     this.maxX = GAME_WIDTH - 50;
-    
+
+    // Jump physics
+    this.velocityY = 0;
+    this.isGrounded = true;
+
     // Stats
     this.maxHealth = 100;
     this.health = 100;
@@ -74,46 +79,40 @@ class Fighter {
     this.maxSuper = 100;
     this.combo = 0;
     this.comboTimer = 0;
-    
+
     // State
     this.state = FighterState.IDLE;
-    this.facing = side === 'left' ? 1 : -1; // 1 for right-facing, -1 for left
-    
+    this.facing = side === 'left' ? 1 : -1;
+
     // Input
     this.inputBuffer = [];
-    this.inputWindow = 10; // frames
-    
+    this.inputWindow = 10;
+
     // Animation
     this.currentFrame = 0;
     this.frameTimer = 0;
     this.frameDelay = 6;
     this.currentAnimation = 'idle';
-    
+
     // Attack timers
     this.attackCooldown = 0;
     this.punchEndlag = 0;
     this.kickEndlag = 0;
     this.blockCooldown = 0;
     this.hitStun = 0;
-    
+
     // Visual
     this.spriteElement = document.getElementById(`sprite-p${side === 'left' ? 1 : 2}`);
     this.spriteWrap = document.getElementById(`sprite-p${side === 'left' ? 1 : 2}-wrap`);
   }
-  
+
   // ─── Input Handling ─────────────────────────────────────────
   addInput(key) {
-    this.inputBuffer.push({
-      key,
-      age: 0
-    });
-    
-    // Keep buffer size reasonable
+    this.inputBuffer.push({ key, age: 0 });
     if (this.inputBuffer.length > 6) this.inputBuffer.shift();
   }
-  
+
   updateInputBuffer() {
-    // Age all inputs
     for (let i = 0; i < this.inputBuffer.length; i++) {
       this.inputBuffer[i].age++;
       if (this.inputBuffer[i].age > this.inputWindow) {
@@ -122,36 +121,40 @@ class Fighter {
       }
     }
   }
-  
+
   // ─── Movement ───────────────────────────────────────────────
   moveLeft() {
-    // Can't move while in hitstun or knocked down
-    if (this.state === FighterState.HIT || this.state === FighterState.KNOCKED_DOWN) {
-      return;
-    }
-    
-    // Only set walking if currently idle or already walking
-    if (this.state === FighterState.IDLE || this.state === FighterState.WALKING) {
+    if (this.state === FighterState.HIT || this.state === FighterState.KNOCKED_DOWN) return;
+
+    if (this.isGrounded &&
+        (this.state === FighterState.IDLE || this.state === FighterState.WALKING)) {
       this.setState(FighterState.WALKING);
     }
-    
+
     this.x = Math.max(this.minX, this.x - 4);
   }
-  
+
   moveRight() {
-    // Can't move while in hitstun or knocked down
-    if (this.state === FighterState.HIT || this.state === FighterState.KNOCKED_DOWN) {
-      return;
-    }
-    
-    // Only set walking if currently idle or already walking
-    if (this.state === FighterState.IDLE || this.state === FighterState.WALKING) {
+    if (this.state === FighterState.HIT || this.state === FighterState.KNOCKED_DOWN) return;
+
+    if (this.isGrounded &&
+        (this.state === FighterState.IDLE || this.state === FighterState.WALKING)) {
       this.setState(FighterState.WALKING);
     }
-    
+
     this.x = Math.min(this.maxX, this.x + 4);
   }
-  
+
+  jump() {
+    if (this.isGrounded &&
+        this.state !== FighterState.HIT &&
+        this.state !== FighterState.KNOCKED_DOWN) {
+      this.velocityY = -18;
+      this.isGrounded = false;
+      this.setState(FighterState.JUMPING);
+    }
+  }
+
   // ─── Actions ────────────────────────────────────────────────
   punch() {
     if (this.canAttack() && this.state !== FighterState.BLOCKING) {
@@ -162,7 +165,7 @@ class Fighter {
     }
     return false;
   }
-  
+
   kick() {
     if (this.canAttack() && this.state !== FighterState.BLOCKING) {
       this.setState(FighterState.KICKING);
@@ -172,17 +175,17 @@ class Fighter {
     }
     return false;
   }
-  
+
   startBlocking() {
-    if (this.state !== FighterState.BLOCKING && 
-        this.state !== FighterState.PUNCHING && 
+    if (this.state !== FighterState.BLOCKING &&
+        this.state !== FighterState.PUNCHING &&
         this.state !== FighterState.KICKING) {
       this.setState(FighterState.BLOCKING);
       return true;
     }
     return false;
   }
-  
+
   stopBlocking() {
     if (this.state === FighterState.BLOCKING) {
       this.setState(FighterState.IDLE);
@@ -190,31 +193,31 @@ class Fighter {
     }
     return false;
   }
-  
+
   canAttack() {
-    return this.attackCooldown <= 0 && 
-           this.state !== FighterState.HIT && 
+    return this.attackCooldown <= 0 &&
+           this.state !== FighterState.HIT &&
            this.state !== FighterState.KNOCKED_DOWN &&
            this.state !== FighterState.BLOCKING;
   }
-  
+
   // ─── Damage & Knockback ──────────────────────────────────────
   takeDamage(amount, knockback = 10) {
     if (this.state === FighterState.BLOCKING) {
-      amount *= 0.5; // Reduce damage while blocking
+      amount *= 0.5;
     }
-    
+
     this.health = Math.max(0, this.health - amount);
     this.superMeter = Math.min(this.maxSuper, this.superMeter + amount * 0.5);
-    this.combo = 0; // Reset attacker's combo on block/hit
-    
+    this.combo = 0;
+
     if (this.health <= 0) {
       this.setState(FighterState.LOSING);
     } else {
       this.setState(FighterState.HIT);
       this.hitStun = 8;
-      
-      // Knockback
+
+      // Always push away from attacker using side
       if (this.side === 'left') {
         this.x = Math.max(this.minX, this.x - knockback);
       } else {
@@ -222,16 +225,15 @@ class Fighter {
       }
     }
   }
-  
+
   // ─── State Management ────────────────────────────────────────
   setState(newState) {
     if (this.state === newState) return;
-    
+
     this.state = newState;
     this.currentFrame = 0;
     this.frameTimer = 0;
-    
-    // Set animation based on state
+
     switch (newState) {
       case FighterState.IDLE:
         this.currentAnimation = 'idle';
@@ -239,8 +241,11 @@ class Fighter {
       case FighterState.WALKING:
         this.currentAnimation = 'walking1';
         break;
+      case FighterState.JUMPING:
+        this.currentAnimation = 'jumping';
+        break;
       case FighterState.BLOCKING:
-        this.currentAnimation = 'idle'; // Use idle for block pose
+        this.currentAnimation = 'idle';
         this.spriteWrap.classList.add('blocking');
         break;
       case FighterState.PUNCHING:
@@ -263,38 +268,37 @@ class Fighter {
         break;
     }
   }
-  
+
   // ─── Animation ──────────────────────────────────────────────
   updateAnimation() {
     this.frameTimer++;
-    
+
     if (this.frameTimer >= this.frameDelay) {
       this.frameTimer = 0;
       this.currentFrame++;
     }
-    
-    // Handle walk cycling
+
     if (this.state === FighterState.WALKING) {
       const walkCycle = WALK_CYCLES[this.character];
       const cycleIndex = this.currentFrame % walkCycle.length;
       this.currentAnimation = walkCycle[cycleIndex];
     }
-    
+
     this.updateSpriteImage();
   }
-  
+
   updateSpriteImage() {
     const animData = ANIMATIONS[this.character];
     if (animData && animData[this.currentAnimation]) {
       this.spriteElement.src = animData[this.currentAnimation];
     }
   }
-  
+
   // ─── Update Loop ────────────────────────────────────────────
   update() {
     this.updateInputBuffer();
     this.updateAnimation();
-    
+
     // Decay timers
     if (this.attackCooldown > 0) this.attackCooldown--;
     if (this.punchEndlag > 0) this.punchEndlag--;
@@ -302,57 +306,67 @@ class Fighter {
     if (this.hitStun > 0) this.hitStun--;
     if (this.comboTimer > 0) this.comboTimer--;
     else this.combo = 0;
-    
+
+    // Jump physics
+    if (!this.isGrounded) {
+      this.velocityY += 1.2; // gravity
+      this.y += this.velocityY;
+
+      if (this.y >= 0) {
+        this.y = 0;
+        this.velocityY = 0;
+        this.isGrounded = true;
+        if (this.state === FighterState.JUMPING) {
+          this.setState(FighterState.IDLE);
+        }
+      }
+    }
+
     // State transitions
     if (this.state === FighterState.PUNCHING && this.punchEndlag <= 0) {
       this.setState(FighterState.IDLE);
       this.spriteWrap.classList.remove('attacking');
     }
-    
+
     if (this.state === FighterState.KICKING && this.kickEndlag <= 0) {
       this.setState(FighterState.IDLE);
       this.spriteWrap.classList.remove('attacking');
     }
-    
+
     if (this.state === FighterState.HIT && this.hitStun <= 0) {
       this.setState(FighterState.IDLE);
       this.spriteWrap.classList.remove('hit');
     }
-    
-    // Return to idle from walk if no movement input
-    if (this.state === FighterState.WALKING) {
-      // This will be handled by the game controller checking if movement keys are pressed
-    }
-    
+
     // Update health bar
     const healthBar = document.getElementById(`health-p${this.side === 'left' ? 1 : 2}`);
     const healthPercent = (this.health / this.maxHealth) * 100;
     healthBar.style.width = healthPercent + '%';
-    
+
     if (this.health <= this.maxHealth * 0.25) {
       healthBar.classList.add('danger');
     } else {
       healthBar.classList.remove('danger');
     }
-    
+
     // Update super meter
     const superBar = document.getElementById(`super-p${this.side === 'left' ? 1 : 2}`);
-    const superPercent = (this.superMeter / this.maxSuper) * 100;
-    superBar.style.width = superPercent + '%';
-    
+    superBar.style.width = (this.superMeter / this.maxSuper) * 100 + '%';
+
     // Update combo display
     const comboDisplay = document.getElementById(`combo-p${this.side === 'left' ? 1 : 2}`);
     const comboCount = document.getElementById(`combo-count-p${this.side === 'left' ? 1 : 2}`);
-    
+
     if (this.combo > 0) {
       comboDisplay.classList.add('active');
       comboCount.textContent = this.combo;
     } else {
       comboDisplay.classList.remove('active');
     }
-    
-    // Sync visual position to DOM
-    this.spriteWrap.parentElement.style.transform = `translateX(${this.x - (this.side === 'left' ? 150 : GAME_WIDTH - 150)}px)`;
+
+    // Sync visual position — X for movement, Y for jump arc
+    this.spriteWrap.parentElement.style.transform =
+      `translateX(${this.x - (this.side === 'left' ? 150 : GAME_WIDTH - 150)}px) translateY(${this.y}px)`;
   }
 }
 
@@ -365,121 +379,107 @@ class FightGame {
     this.time = ROUND_TIME;
     this.gameActive = true;
     this.paused = false;
-    
+
     this.keysPressed = {};
-    this.blockingKeys = new Set();
-    
+
     this.setupEventListeners();
     this.updateTimer();
   }
-  
+
   setupEventListeners() {
     document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     document.addEventListener('keyup', (e) => this.handleKeyUp(e));
-    
+
     document.getElementById('resume-btn').addEventListener('click', () => this.togglePause());
     document.getElementById('restart-btn').addEventListener('click', () => this.restart());
   }
-  
+
   handleKeyDown(e) {
     if (e.key === 'Escape') {
       this.togglePause();
       return;
     }
-    
+
     if (this.paused) return;
-    
+
     const key = e.key.toLowerCase();
     this.keysPressed[key] = true;
-    
-    // Prevent default for arrow keys
+
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
       e.preventDefault();
     }
-    
-    // Only trigger action keys on press (not movement)
-    // Player 1 Controls
-    if (key === 'z') {
-      this.p1.punch();
-    } else if (key === 'x') {
-      this.p1.kick();
-    } else if (key === 'c') {
-      this.p1.startBlocking();
-    } else if (key === 'v') {
-      this.p1.addInput('special');
-    }
-    
-    // Player 2 Controls
-    if (key === 'u') {
-      this.p2.punch();
-    } else if (key === 'p') {
-      this.p2.kick();
-    } else if (key === 'k') {
-      this.p2.startBlocking();
-    } else if (key === 'l') {
-      this.p2.addInput('special');
-    }
+
+    // Player 1 — Arrow keys move, Z punch, X kick, C block, V special, ArrowUp jump
+    if (key === 'arrowup')  this.p1.jump();
+    if (key === 'z')        this.p1.punch();
+    if (key === 'x')        this.p1.kick();
+    if (key === 'c')        this.p1.startBlocking();
+    if (key === 'v')        this.p1.addInput('special');
+
+    // Player 2 — J/L move, I jump, U punch, P kick, K block
+    if (key === 'i')        this.p2.jump();
+    if (key === 'u')        this.p2.punch();
+    if (key === 'p')        this.p2.kick();
+    if (key === 'k')        this.p2.startBlocking();
+    if (key === 'o')        this.p2.addInput('special');
   }
-  
+
   handleKeyUp(e) {
     const key = e.key.toLowerCase();
     this.keysPressed[key] = false;
-    
-    // Release blocks
+
     if (key === 'c') this.p1.stopBlocking();
     if (key === 'k') this.p2.stopBlocking();
   }
-  
+
   // ─── Hitbox Detection & Damage ──────────────────────────────
   checkHits() {
     // P1 attacking P2
     if (this.p1.state === FighterState.PUNCHING && this.p1.punchEndlag === 11) {
       if (this.isHit(this.p1, this.p2, 80)) {
-        const damage = 8;
-        this.p2.takeDamage(damage, 15);
+        this.p2.takeDamage(8, 15);
         this.p1.combo++;
         this.p1.comboTimer = 120;
         this.showHitMessage('HIT!', this.p1.x, this.p1.y);
       }
     }
-    
+
     if (this.p1.state === FighterState.KICKING && this.p1.kickEndlag === 17) {
       if (this.isHit(this.p1, this.p2, 120)) {
-        const damage = 12;
-        this.p2.takeDamage(damage, 25);
+        this.p2.takeDamage(12, 25);
         this.p1.combo++;
         this.p1.comboTimer = 120;
         this.showHitMessage('HIT!', this.p1.x, this.p1.y);
       }
     }
-    
-    // P2 attacking P1
+
+    // P2 attacking P1 — knockback is positive; takeDamage handles direction
     if (this.p2.state === FighterState.PUNCHING && this.p2.punchEndlag === 11) {
       if (this.isHit(this.p2, this.p1, 80)) {
-        const damage = 8;
-        this.p1.takeDamage(damage, -15);
+        this.p1.takeDamage(8, 15);  // fixed: was -15
         this.p2.combo++;
         this.p2.comboTimer = 120;
         this.showHitMessage('HIT!', this.p2.x, this.p2.y);
       }
     }
-    
+
     if (this.p2.state === FighterState.KICKING && this.p2.kickEndlag === 17) {
       if (this.isHit(this.p2, this.p1, 120)) {
-        const damage = 12;
-        this.p1.takeDamage(damage, -25);
+        this.p1.takeDamage(12, 25);  // fixed: was -25
         this.p2.combo++;
         this.p2.comboTimer = 120;
         this.showHitMessage('HIT!', this.p2.x, this.p2.y);
       }
     }
   }
-  
+
   isHit(attacker, defender, range) {
-    const distance = Math.abs(attacker.x - defender.x);
-    return distance < range;
-  }
+    const attackerCenter = attacker.x + attacker.width / 2;
+    const defenderCenter = defender.x + defender.width / 2;
   
+    return Math.abs(attackerCenter - defenderCenter) < range;
+  }
+
   // ─── Messages ───────────────────────────────────────────────
   showHitMessage(text, x, y) {
     const layer = document.getElementById('message-layer');
@@ -489,17 +489,17 @@ class FightGame {
     msg.style.left = x + 'px';
     msg.style.top = y + 'px';
     layer.appendChild(msg);
-    
+
     setTimeout(() => {
       msg.classList.add('fade');
       setTimeout(() => msg.remove(), 500);
     }, 300);
   }
-  
+
   updateTimer() {
     const timerEl = document.getElementById('timer');
     timerEl.textContent = this.time;
-    
+
     if (this.gameActive && !this.paused) {
       if (this.time > 0) {
         setTimeout(() => {
@@ -511,10 +511,10 @@ class FightGame {
       }
     }
   }
-  
+
   endRound() {
     this.gameActive = false;
-    
+
     if (this.p1.health <= 0) {
       this.showMessage('P2 WINS!');
     } else if (this.p2.health <= 0) {
@@ -527,7 +527,7 @@ class FightGame {
       this.showMessage('DRAW!');
     }
   }
-  
+
   showMessage(text) {
     const layer = document.getElementById('message-layer');
     const msg = document.createElement('div');
@@ -535,53 +535,45 @@ class FightGame {
     msg.textContent = text;
     layer.appendChild(msg);
   }
-  
+
   togglePause() {
     this.paused = !this.paused;
     document.getElementById('pause-menu').classList.toggle('active');
-    
-    if (!this.paused) {
-      this.updateTimer();
-    }
+    if (!this.paused) this.updateTimer();
   }
-  
+
   restart() {
     location.reload();
   }
-  
+
   // ─── Main Update Loop ───────────────────────────────────────
   update() {
     if (!this.gameActive || this.paused) return;
-    
-    // Handle continuous movement based on held keys
-    // Player 1
+
+    // Player 1 movement — ArrowLeft / ArrowRight, ArrowUp to jump
     if (this.keysPressed['arrowleft']) {
       this.p1.moveLeft();
     } else if (this.keysPressed['arrowright']) {
       this.p1.moveRight();
     } else if (this.p1.state === FighterState.WALKING) {
-      // Return to idle if no movement key pressed
       this.p1.setState(FighterState.IDLE);
     }
-    
-    // Player 2
-    if (this.keysPressed['i']) {
+
+    // Player 2 movement — J / L to move, I to jump (bound in keydown)
+    if (this.keysPressed['j']) {
       this.p2.moveLeft();
-    } else if (this.keysPressed['o']) {
+    } else if (this.keysPressed['l']) {
       this.p2.moveRight();
     } else if (this.p2.state === FighterState.WALKING) {
-      // Return to idle if no movement key pressed
       this.p2.setState(FighterState.IDLE);
     }
-    
-    // Update both fighters
+
     this.p1.update();
     this.p2.update();
-    
-    // Check for hits
+
     this.checkHits();
   }
-  
+
   loop() {
     this.update();
     requestAnimationFrame(() => this.loop());
