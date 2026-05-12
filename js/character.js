@@ -20,7 +20,8 @@ const ROSTER = [
       block:   'assets/characters/issam/block.png',
       special: 'assets/characters/issam/special.png',
       hurt:    'assets/characters/issam/hurt.png',
-      ko:      'assets/characters/issam/ko.png',
+      ko: 'assets/characters/issam/ko.png',
+      win : 'assets/characters/issam/winning.png',
     },
     stats: { speed: 8, power: 7, defense: 6, special: 7 },
     moves: {
@@ -33,6 +34,29 @@ const ROSTER = [
     color: '#C8503A',
     unlocked: true,
   },
+  {
+     id: 'naima',
+     name: 'NAIMA',
+     nameAR: 'NAIMA',
+     origin: 'FES',
+     style: 'Speed',
+     description: 'A swift fighter from the ancient medina',
+     sprites: {
+       idle: 'assets/characters/naima/idle.png',
+       walk: 'assets/characters/naima/walking.png',
+       crouch:  'assets/characters/naima/crouch.png',
+
+       punch: 'assets/characters/naima/punch1.png',
+       block: 'assets/characters/naima/block.png',
+       ko:      'assets/characters/naima/losing.png',
+       jump:    'assets/characters/naima/jumping.png',
+       win: 'assets/characters/naima/winning.png',
+     },
+     stats: { health: 85, attack: 12, defense: 8, speed: 18 },
+    color: '#00d9ff',
+    unlocked: true,
+
+   },
   {
     id: 'cheb-arbi',
     name: 'CHEB ARBI',

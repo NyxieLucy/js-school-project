@@ -14,9 +14,7 @@ const ANIMATIONS = {
     idle: 'assets/characters/issam/idle.png',
     idle1: 'assets/characters/issam/idle1.png',
     walking1: 'assets/characters/issam/walking1.png',
-    walking2: 'assets/characters/issam/walking2.png',
     walking3: 'assets/characters/issam/walking3.png',
-    walking4: 'assets/characters/issam/walking4.png',
     punch: 'assets/characters/issam/punch.png',
     kick: 'assets/characters/issam/kick.png',
     crouch: 'assets/characters/issam/crouch.png',
@@ -28,6 +26,7 @@ const ANIMATIONS = {
     idle: 'assets/characters/cheb-arbi/idle.png',
     walking: 'assets/characters/cheb-arbi/walking.png',
     punch1: 'assets/characters/cheb-arbi/punch3.png',
+    crouch : 'assets/characters/cheb-arbi/crouch.png',
     kick: 'assets/characters/cheb-arbi/kick.png',
     jumping: 'assets/characters/cheb-arbi/jumping.png',
     winning: 'assets/characters/cheb-arbi/winning.png',
@@ -487,10 +486,24 @@ class FightGame {
   }
 
   // ─── Hitbox Detection & Damage ──────────────────────────────
+  //
+  //  HITBOX SYSTEM EXPLANATION:
+  //  ──────────────────────────
+  //  Each fighter has:
+  //    • Body hitbox: the area where they can BE hit (centered on their position)
+  //    • Attack hitbox: the area where their attack CAN hit (extends from their edge toward opponent)
+  //
+  //  Punch: short range, extends ~60px from attacker's front edge
+  //  Kick:  longer range, extends ~100px from attacker's front edge
+  //
+  //  A hit connects when:
+  //    1. The attacker's attack hitbox overlaps the defender's body hitbox
+  //    2. The attacker is facing the defender
+  //
   checkHits() {
     // P1 attacking P2
     if (this.p1.state === FighterState.PUNCHING && this.p1.punchEndlag === 11) {
-      if (this.isHit(this.p1, this.p2, 80)) {
+      if (this.isHit(this.p1, this.p2, 280)) {  // punch reach: 60px from attacker edge
         const comboMultiplier = 1 + (this.p1.combo * 0.1);
         this.p2.takeDamage(Math.floor(8 * comboMultiplier), 15);
         this.p1.combo++;
@@ -500,7 +513,7 @@ class FightGame {
     }
 
     if (this.p1.state === FighterState.KICKING && this.p1.kickEndlag === 17) {
-      if (this.isHit(this.p1, this.p2, 120)) {
+      if (this.isHit(this.p1, this.p2, 330)) {  // kick reach: 100px from attacker edge
         const comboMultiplier = 1 + (this.p1.combo * 0.1);
         this.p2.takeDamage(Math.floor(12 * comboMultiplier), 25);
         this.p1.combo++;
@@ -511,7 +524,7 @@ class FightGame {
 
     // P2 attacking P1
     if (this.p2.state === FighterState.PUNCHING && this.p2.punchEndlag === 11) {
-      if (this.isHit(this.p2, this.p1, 80)) {
+      if (this.isHit(this.p2, this.p1, 330)) {  // punch reach: 60px from attacker edge
         const comboMultiplier = 1 + (this.p2.combo * 0.1);
         this.p1.takeDamage(Math.floor(8 * comboMultiplier), 15);
         this.p2.combo++;
@@ -521,7 +534,7 @@ class FightGame {
     }
 
     if (this.p2.state === FighterState.KICKING && this.p2.kickEndlag === 17) {
-      if (this.isHit(this.p2, this.p1, 120)) {
+      if (this.isHit(this.p2, this.p1, 280)) {  // kick reach: 100px from attacker edge
         const comboMultiplier = 1 + (this.p2.combo * 0.1);
         this.p1.takeDamage(Math.floor(12 * comboMultiplier), 25);
         this.p2.combo++;
@@ -531,18 +544,45 @@ class FightGame {
     }
   }
 
-  isHit(attacker, defender, range) {
-    const attackerCenter = attacker.x + attacker.width / 2;
-    const defenderCenter = defender.x + defender.width / 2;
+  //
+  //  isHit(attacker, defender, reach)
+  //  ─────────────────────────────────
+  //  Checks if the attacker's attack hitbox overlaps the defender's body.
+  //
+  //  Attacker's front edge = attacker.x + (attacker.width/2) * attacker.facing
+  //  Attack hitbox extends 'reach' pixels from that edge toward the defender.
+  //
+  //  Defender's body spans from (defender.x - defender.width/2) to (defender.x + defender.width/2)
+  //
+  isHit(attacker, defender, reach) {
+    // Attacker's front edge (the side they're facing)
+    const attackerFront = attacker.x + (attacker.width / 2) * attacker.facing;
 
-    const distance = Math.abs(attackerCenter - defenderCenter);
+    // Attack hitbox: extends 'reach' pixels from front edge in facing direction
+    let attackStart, attackEnd;
+    if (attacker.facing === 1) {
+      // Facing right: hitbox goes from front edge to front edge + reach
+      attackStart = attackerFront;
+      attackEnd = attackerFront + reach;
+    } else {
+      // Facing left: hitbox goes from front edge - reach to front edge
+      attackStart = attackerFront - reach;
+      attackEnd = attackerFront;
+    }
 
-    const isInFront =
-      attacker.facing === 1
-        ? defenderCenter > attackerCenter
-        : defenderCenter < attackerCenter;
+    // Defender's body hitbox
+    const defenderLeft = defender.x - defender.width / 2;
+    const defenderRight = defender.x + defender.width / 2;
 
-    return distance < range && isInFront;
+    // Check overlap: attack hitbox must intersect defender's body
+    const overlap = attackStart < defenderRight && attackEnd > defenderLeft;
+
+    // Also verify attacker is actually facing the defender
+    const isInFront = attacker.facing === 1
+      ? defender.x > attacker.x
+      : defender.x < attacker.x;
+
+    return overlap && isInFront;
   }
 
   // ─── Messages ───────────────────────────────────────────────
