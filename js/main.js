@@ -99,9 +99,8 @@ class SoukBrawl {
    * Handle window resize
    */
   onWindowResize() {
-    GameConfig.CANVAS.WIDTH = window.innerWidth;
-    GameConfig.CANVAS.HEIGHT = window.innerHeight;
-    Utils.Debug.log('Window resized:', GameConfig.CANVAS);
+    // Preserve logical resolution (1280x720) while updating view tracking
+    GameConfig.CANVAS.VIEW_HEIGHT = window.innerHeight;
   }
 
   /**

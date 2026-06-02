@@ -32,6 +32,7 @@ class InputSystem {
    */
   onKeyDown(event) {
     const key = event.key.toLowerCase();
+    this.keys[key] = true;
       this.buffer.push({ key, time: Date.now() });
       if (this.buffer.length > 10) this.buffer.shift();
   }
@@ -170,11 +171,12 @@ class InputSystem {
   getDirectionInput() {
     const direction = { x: 0, y: 0 };
 
-    // Keyboard input
-    if (this.isKeyPressed(GameConfig.KEYS.UP)) direction.y -= 1;
-    if (this.isKeyPressed(GameConfig.KEYS.DOWN)) direction.y += 1;
-    if (this.isKeyPressed(GameConfig.KEYS.LEFT)) direction.x -= 1;
-    if (this.isKeyPressed(GameConfig.KEYS.RIGHT)) direction.x += 1;
+    const keys = GameConfig.UI_KEYS;
+    // Keyboard input mapping to current config
+    if (this.isKeyPressed(keys.UP)) direction.y -= 1;
+    if (this.isKeyPressed(keys.DOWN)) direction.y += 1;
+    if (this.isKeyPressed(keys.LEFT)) direction.x -= 1;
+    if (this.isKeyPressed(keys.RIGHT)) direction.x += 1;
 
     // Normalize diagonal movement
     const magnitude = Math.sqrt(direction.x ** 2 + direction.y ** 2);
@@ -190,28 +192,28 @@ class InputSystem {
    * Check if confirm action (select key)
    */
   isConfirmPressed() {
-    return this.isKeyPressed(GameConfig.KEYS.SELECT);
+    return this.isKeyPressed(GameConfig.UI_KEYS.PUNCH);
   }
 
   /**
    * Check if confirm action just pressed
    */
   isConfirmJustPressed() {
-    return this.isKeyJustPressed(GameConfig.KEYS.SELECT);
+    return this.isKeyJustPressed(GameConfig.UI_KEYS.PUNCH);
   }
 
   /**
    * Check if back action (back key)
    */
   isBackPressed() {
-    return this.isKeyPressed(GameConfig.KEYS.BACK);
+    return this.isKeyPressed(GameConfig.UI_KEYS.KICK);
   }
 
   /**
    * Check if back action just pressed
    */
   isBackJustPressed() {
-    return this.isKeyJustPressed(GameConfig.KEYS.BACK);
+    return this.isKeyJustPressed(GameConfig.UI_KEYS.KICK);
   }
 
   /**

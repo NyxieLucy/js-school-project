@@ -50,13 +50,6 @@ class MenuSystem {
     Utils.Event.on('input:keydown', (event) => {
       this.handleMenuInput(event.detail.key);
     });
-
-    // Update input state each frame
-    setInterval(() => {
-      if (window.inputSystem) {
-        window.inputSystem.update();
-      }
-    }, 1000 / 60); // 60 FPS
   }
 
   /**
@@ -65,7 +58,7 @@ class MenuSystem {
   handleMenuInput(key) {
     if (this.isNavigating) return;
 
-    const keys = GameConfig.KEYS;
+    const keys = GameConfig.UI_KEYS;
 
     switch (key) {
       case keys.UP.toLowerCase():
@@ -74,10 +67,10 @@ class MenuSystem {
       case keys.DOWN.toLowerCase():
         this.moveDown();
         break;
-      case keys.SELECT.toLowerCase():
+      case keys.PUNCH.toLowerCase(): // Use P1 Punch as "Select"
         this.confirmSelection();
         break;
-      case keys.BACK.toLowerCase():
+      case keys.KICK.toLowerCase(): // Use P1 Kick as "Back"
         this.goBack();
         break;
     }
@@ -115,6 +108,12 @@ class MenuSystem {
     if (this.menuItems[this.selectedIndex]) {
       Utils.DOM.addClass(this.menuItems[this.selectedIndex], 'active');
       Utils.Debug.log('Selected menu item:', this.selectedIndex);
+
+      // Auto-update showcase if selecting a character
+      const charId = this.menuItems[this.selectedIndex].getAttribute('data-character-id');
+      if (charId) {
+        this.updateCharacterShowcase(charId);
+      }
     }
   }
 
@@ -136,6 +135,16 @@ class MenuSystem {
     this.isNavigating = true;
     const href = selectedItem.getAttribute('href');
     const action = selectedItem.getAttribute('data-action');
+
+    // Persist character selection to FightConfig before navigating
+    const charId = selectedItem.getAttribute('data-character-id');
+    if (charId) {
+      const config = { ...FightConfig.defaults, ...FightConfig.load() };
+      config.p1CharId = charId; // In a single-player selection, P1 is the user
+      // If we're coming from the versus menu, we could set a flag here
+      config.mode = action === 'versus' ? 'versus' : 'arcade';
+      FightConfig.save(config);
+    }
 
     this.playSound('menu_select');
     Utils.Event.emit('menu:selected', { action, href });
@@ -195,7 +204,7 @@ class MenuSystem {
    * Update character showcase
    */
   updateCharacterShowcase(characterId) {
-    const character = GameConfig.CHARACTERS[characterId.toUpperCase()];
+    const character = ROSTER.find(c => c.id === characterId);
     if (!character) return;
 
     const spriteImg = Utils.DOM.select('#hero-sprite-img');
@@ -203,9 +212,9 @@ class MenuSystem {
     const heroNameAr = Utils.DOM.select('.hero-name-ar');
     const heroOrigin = Utils.DOM.select('.hero-origin');
 
-    if (spriteImg) spriteImg.src = character.assets.idle;
+    if (spriteImg) spriteImg.src = character.sprites.idle;
     if (heroName) heroName.textContent = character.name;
-    if (heroNameAr) heroNameAr.textContent = character.nameAR;
+    if (heroNameAr) heroNameAr.textContent = character.nameAr;
     if (heroOrigin) heroOrigin.textContent = character.origin;
 
     this.playSound('character_select');

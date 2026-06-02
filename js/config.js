@@ -10,20 +10,40 @@ const GameConfig = {
   TITLE: 'SOUK BRAWL',
   VERSION: '1.0.0',
 
-  // Canvas settings
+  // UI Navigation (Defaults to P1 keys)
+  get UI_KEYS() {
+    return this.KEYS_P1;
+  },
+
+  // Logical Resolution (Game coordinates)
   CANVAS: {
-    WIDTH: window.innerWidth,
-    HEIGHT: window.innerHeight,
+    WIDTH: 1280,
+    HEIGHT: 720,
+    GROUND_Y: 600, // Logical Y position of the floor
+    STAGE_PADDING: 100,
+    VIEW_HEIGHT: window.innerHeight,
   },
 
   // Keyboard bindings
-  KEYS: {
-    SELECT: 'z',      // Menu selection / Attack
-    BACK: 'x',        // Go back / Block
+  KEYS_P1: {
     UP: 'arrowup',
     DOWN: 'arrowdown',
     LEFT: 'arrowleft',
     RIGHT: 'arrowright',
+    PUNCH: 'z',
+    KICK: 'x',
+    BLOCK: 'c',
+    SPECIAL: 'v',
+  },
+  KEYS_P2: {
+    UP: 'i',
+    DOWN: 'm',
+    LEFT: 'j',
+    RIGHT: 'l',
+    PUNCH: 'u',
+    KICK: 'p',
+    BLOCK: 'k',
+    SPECIAL: 'o',
   },
 
   // Game modes
@@ -33,32 +53,6 @@ const GameConfig = {
     STORY: 'story',
     SURVIVAL: 'survival',
     TRAINING: 'training',
-  },
-
-  // Characters - Moroccan-inspired fighters
-  CHARACTERS: {
-    ISSAM: {
-      id: 'issam',
-      name: 'ISSAM',
-      nameAR: 'عصام',
-      origin: 'CASABLANCA',
-      style: 'Balanced',
-      description: 'A determined street fighter from the bustling markets',
-      assets: {
-        idle: 'assets/characters/issam/idle.png',
-        attack: 'assets/characters/issam/attack.png',
-        block: 'assets/characters/issam/block.png',
-        hurt: 'assets/characters/issam/hurt.png',
-        win: 'assets/characters/issam/win.png',
-      },
-      stats: {
-        health: 100,
-        attack: 15,
-        defense: 10,
-        speed: 12,
-      },
-    },
-    // Add more characters as needed
   },
 
   // Audio settings
@@ -83,6 +77,21 @@ const GameConfig = {
     KO_TIME: 3,             // seconds
     MAX_COMBOS: 10,
     HEALTH_REGEN_DELAY: 3000, // milliseconds
+    
+    // Physics
+    GRAVITY: 0.8,
+    JUMP_FORCE: -18,
+    FRICTION: 0.15,
+    WALK_SPEED: 6,
+    DASH_MULTIPLIER: 1.5,
+    DASH_WINDOW: 250,        // ms window for double tap
+    HITSTOP_DURATION: 5,     // frames to freeze on hit
+  },
+
+  // AI Difficulty
+  AI: {
+    REACTION_SPEED: 15,      // frames before AI reacts
+    AGGRESSION: 0.7,         // 0-1 chance to attack
   },
 
   // Storage keys
