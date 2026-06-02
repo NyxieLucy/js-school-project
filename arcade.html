@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
-<base target="_blank">
 </head>
 <body>
 
@@ -22,7 +21,6 @@
         <div class="sub-coins">CREDITS: <span id="credits">3</span></div>
       </div>
 
-      <!-- Player Character Panel (1254x1254 ratio) -->
       <div class="arcade-hero-section">
         <div class="vs-panel p1-panel">
           <div class="char-info left">
@@ -80,14 +78,19 @@
     </div>
   </div>
 
-  <scrip src="js/main.js">
-      <script>
-    // Ensure ROSTER is available (it's usually loaded via a script tag)
-    // We'll use GameConfig.CHARACTERS directly if ROSTER isn't immediately available
-    const ROSTER = typeof ROSTER !== 'undefined' ? ROSTER : Object.values(GameConfig.CHARACTERS);
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/character.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // ROSTER is already loaded from character.js — DO NOT redeclare it with const/let
+    if (typeof ROSTER === 'undefined' || ROSTER.length === 0) {
+      console.error('ROSTER not loaded. Check that character.js is loaded before this script.');
+    }
 
-    let p1Idx = 0; // Player character index
-    let p2Idx = 1; // Opponent character index (can be randomized or selected later)
+    let p1Idx = 0;
+    let p2Idx = 1;
 
     const p1NameEl = document.querySelector('.p1-panel .char-name');
     const p1OriginEl = document.querySelector('.p1-panel .char-origin');
@@ -98,39 +101,36 @@
     const p2ImgEl = document.getElementById('p2-portrait');
 
     function updateDisplay() {
-      if (ROSTER.length === 0) return;
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
 
       const p1 = ROSTER[p1Idx];
       const p2 = ROSTER[p2Idx];
 
-      // Update P1 (Player Character)
       p1NameEl.textContent = p1.name;
       p1OriginEl.textContent = p1.origin;
-      p1ImgEl.src = p1.assets.idle; // Assuming 'assets.idle' holds the correct path
+      p1ImgEl.src = p1.sprites.idle;
 
-      // Update P2 (Opponent Character)
-      // For arcade, we might want to set a default opponent or randomize it
-      // For now, let's use the second character in the roster or a default if not available
       if (p2) {
           p2NameEl.textContent = p2.name;
           p2OriginEl.textContent = p2.origin;
-          p2ImgEl.src = p2.assets.idle;
+          p2ImgEl.src = p2.sprites.idle;
       } else {
           p2NameEl.textContent = '???';
           p2OriginEl.textContent = 'UNKNOWN';
-          p2ImgEl.src = 'assets/characters/unknown.png'; // Placeholder for unknown opponent
+          p2ImgEl.src = 'assets/characters/unknown.png';
       }
 
-      // Persistence for selected characters
       localStorage.setItem('p1_selected_arcade', p1.id);
       localStorage.setItem('p2_selected_arcade', p2 ? p2.id : 'unknown');
     }
 
-    // Event listener for character selection
+    // ─── Keyboard Controls ───
     window.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
 
-      // P1: Up/Down Arrows for character selection
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
+
+      // P1: Up/Down Arrows
       if (e.key === 'ArrowUp') {
         p1Idx = (p1Idx + 1) % ROSTER.length;
         updateDisplay();
@@ -140,27 +140,23 @@
         updateDisplay();
       }
 
-      // P2: Left/Right Arrows for opponent selection (or some other keys)
-      // For now, let's keep opponent selection simple or randomized for arcade.
-      // We can implement a more complex selection later if needed.
-      // Example: 'ArrowLeft' and 'ArrowRight' to cycle opponents
+      // P2: Left/Right Arrows
       if (ROSTER.length > 1) {
           if (key === 'arrowleft') {
             p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
-            if (p1Idx === p2Idx) { // Ensure player and opponent are different
+            if (p1Idx === p2Idx) {
                 p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
             }
             updateDisplay();
           }
           if (key === 'arrowright') {
             p2Idx = (p2Idx + 1) % ROSTER.length;
-            if (p1Idx === p2Idx) { // Ensure player and opponent are different
+            if (p1Idx === p2Idx) {
                 p2Idx = (p2Idx + 1) % ROSTER.length;
             }
             updateDisplay();
           }
       }
-
 
       // Back to Menu
       if (key === 'x') {
@@ -173,34 +169,42 @@
       }
     });
 
+    // ─── Difficulty Buttons ───
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // ─── Start Arcade ───
     function startArcadeFight() {
-      // Store selected characters before starting the fight
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
+
       const p1 = ROSTER[p1Idx];
-      const p2 = ROSTER.length > 1 ? ROSTER[p2Idx] : null; // Handle case with only one character
+      const p2 = ROSTER.length > 1 ? ROSTER[p2Idx] : null;
+      const activeDiff = document.querySelector('.diff-btn.active');
 
       localStorage.setItem('p1_selected_arcade', p1.id);
       localStorage.setItem('p2_selected_arcade', p2 ? p2.id : 'unknown');
-      localStorage.setItem('difficulty', document.querySelector('.diff-btn.active').dataset.diff);
+      localStorage.setItem('difficulty', activeDiff ? activeDiff.dataset.diff : 'easy');
 
       window.location.href = 'fight.html';
     }
 
     document.getElementById('start-arcade').addEventListener('click', startArcadeFight);
 
-    // Initialize display and background
+    // ─── Initialize ───
     document.addEventListener('DOMContentLoaded', () => {
-        if (ROSTER.length > 0) {
+        if (typeof ROSTER !== 'undefined' && ROSTER.length > 0) {
             updateDisplay();
         } else {
             console.error("ROSTER is empty. Cannot initialize character selection.");
-            // Optionally, display a message to the user or disable start button
         }
-        // Assuming BackgroundAnimation is available globally or via another script
         if (typeof BackgroundAnimation !== 'undefined') {
             new BackgroundAnimation();
         }
     });
-
   </script>
 </body>
 </html>
