@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+<base target="_blank">
 </head>
 <body>
 
@@ -16,12 +17,12 @@
     <div class="sub-wrap">
 
       <div class="sub-header">
-        <a href="index.html" class="back-btn">◀ BACK</a>
+        <a href="index.html" class="back-btn">&#9664; BACK</a>
         <div class="sub-title">VERSUS MODE</div>
         <div class="sub-title-ar">وضع اللاعبين</div>
       </div>
 
-      <div class="versus-container">
+      <div class="arcade-hero-section">
         <div class="vs-panel p1-panel">
           <div class="char-info left">
             <h2 class="char-name">ISSAM</h2>
@@ -61,10 +62,15 @@
   </div>
 
   <script src="js/config.js"></script>
-  <script src="js/character.js"></script> 
+  <script src="js/utils.js"></script>
+  <script src="js/character.js"></script>
   <script src="js/background.js"></script>
 
   <script>
+    if (typeof ROSTER === 'undefined' || ROSTER.length === 0) {
+      console.error('ROSTER not loaded. Check script order.');
+    }
+
     let p1Idx = 0;
     let p2Idx = 1;
 
@@ -77,39 +83,54 @@
     const p2ImgEl = document.getElementById('p2-portrait');
 
     function updateDisplay() {
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
+
+      // Ensure P1 and P2 never pick the same character
+      if (p1Idx === p2Idx) {
+        p2Idx = (p2Idx + 1) % ROSTER.length;
+        if (p2Idx === p1Idx) p2Idx = (p2Idx + 1) % ROSTER.length;
+      }
+
       const p1 = ROSTER[p1Idx];
       const p2 = ROSTER[p2Idx];
 
-      // Update P1
       p1NameEl.textContent = p1.name;
       p1OriginEl.textContent = p1.origin;
       p1ImgEl.src = p1.sprites.idle;
-      
-      // Update P2
+
       p2NameEl.textContent = p2.name;
       p2OriginEl.textContent = p2.origin;
       p2ImgEl.src = p2.sprites.idle;
-
-      // Persistence
-      localStorage.setItem('p1_selected', p1.id);
-      localStorage.setItem('p2_selected', p2.id);
     }
 
-    // Improved controls: P1 uses Arrows, P2 uses WASD
     window.addEventListener('keydown', (e) => {
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
+
       const key = e.key.toLowerCase();
 
       // P1: Up/Down Arrows
-      if (e.key === 'ArrowUp') p1Idx = (p1Idx + 1) % ROSTER.length;
-      if (e.key === 'ArrowDown') p1Idx = (p1Idx - 1 + ROSTER.length) % ROSTER.length;
+      if (e.key === 'ArrowUp') {
+        p1Idx = (p1Idx + 1) % ROSTER.length;
+        if (p1Idx === p2Idx) p1Idx = (p1Idx + 1) % ROSTER.length;
+      }
+      if (e.key === 'ArrowDown') {
+        p1Idx = (p1Idx - 1 + ROSTER.length) % ROSTER.length;
+        if (p1Idx === p2Idx) p1Idx = (p1Idx - 1 + ROSTER.length) % ROSTER.length;
+      }
 
       // P2: W/S Keys
-      if (key === 'w') p2Idx = (p2Idx + 1) % ROSTER.length;
-      if (key === 's') p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+      if (key === 'w') {
+        p2Idx = (p2Idx + 1) % ROSTER.length;
+        if (p2Idx === p1Idx) p2Idx = (p2Idx + 1) % ROSTER.length;
+      }
+      if (key === 's') {
+        p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+        if (p2Idx === p1Idx) p2Idx = (p2Idx - 1 + ROSTER.length) % ROSTER.length;
+      }
 
       // Back to Menu
       if (key === 'x') window.location.href = 'index.html';
-      
+
       // Start Fight
       if (key === 'z' || key === 'enter') startBrawl();
 
@@ -117,15 +138,31 @@
     });
 
     function startBrawl() {
-      // Add a small "Select" sound effect here later
+      if (typeof ROSTER === 'undefined' || ROSTER.length === 0) return;
+
+      const p1 = ROSTER[p1Idx];
+      const p2 = ROSTER[p2Idx];
+
+      // Store in sessionStorage for versus mode (separate from arcade localStorage)
+      sessionStorage.setItem('soukbrawl_fight', JSON.stringify({
+        p1CharId: p1.id,
+        p2CharId: p2.id,
+        mode: 'versus',
+        rounds: 3
+      }));
+
       window.location.href = 'fight.html';
     }
 
     document.getElementById('start-fight').addEventListener('click', startBrawl);
 
     // Init
-    updateDisplay();
-    new BackgroundAnimation(); // Start the NixOS-style background
+    document.addEventListener('DOMContentLoaded', () => {
+      updateDisplay();
+      if (typeof BackgroundAnimation !== 'undefined') {
+        new BackgroundAnimation();
+      }
+    });
   </script>
 </body>
 </html>

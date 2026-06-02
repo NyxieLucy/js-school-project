@@ -7,6 +7,185 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+      margin: 20px 0;
+    }
+
+    .opt-group {
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      padding: 16px;
+    }
+
+    .opt-group-title {
+      font-size: 0.8rem;
+      color: #f7b801;
+      margin-bottom: 14px;
+      letter-spacing: 2px;
+      border-bottom: 1px solid rgba(247, 184, 1, 0.3);
+      padding-bottom: 8px;
+    }
+
+    .opt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .opt-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .opt-label {
+      font-size: 0.55rem;
+      color: rgba(255, 255, 255, 0.8);
+      min-width: 120px;
+    }
+
+    .opt-value {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .opt-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .opt-btn:hover {
+      border-color: #00d9ff;
+      color: #00d9ff;
+    }
+
+    .opt-btn.active {
+      background: #ff6b35;
+      border-color: #ff6b35;
+      color: #fff;
+    }
+
+    .opt-slider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .opt-slider input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 120px;
+      height: 6px;
+      background: #1a1a2e;
+      border: 1px solid #f7b801;
+      outline: none;
+    }
+
+    .opt-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #f7b801;
+      cursor: pointer;
+      border: 2px solid #fff;
+    }
+
+    .opt-slider input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: #f7b801;
+      cursor: pointer;
+      border: 2px solid #fff;
+    }
+
+    .slider-val {
+      font-size: 0.5rem;
+      color: #f7b801;
+      min-width: 35px;
+      text-align: right;
+    }
+
+    .options-footer {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .opt-reset, .opt-save {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.6rem;
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 2px solid;
+    }
+
+    .opt-reset {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+
+    .opt-reset:hover {
+      border-color: #ff6b35;
+      color: #ff6b35;
+    }
+
+    .opt-save {
+      background: #ff6b35;
+      border-color: #ff6b35;
+      color: #fff;
+    }
+
+    .opt-save:hover {
+      background: #00d9ff;
+      border-color: #00d9ff;
+    }
+
+    .save-toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #00d9ff;
+      color: #000;
+      font-size: 0.6rem;
+      padding: 10px 24px;
+      border: 2px solid #fff;
+      box-shadow: 4px 4px 0 #000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .save-toast.show {
+      opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 <base target="_blank">
 </head>
 <body>
@@ -29,23 +208,23 @@
           <div class="opt-row">
             <span class="opt-label">Screen Filter</span>
             <div class="opt-value">
-              <button class="opt-btn active">CRT</button>
-              <button class="opt-btn">SCANLINES</button>
-              <button class="opt-btn">OFF</button>
+              <button class="opt-btn active" data-setting="filter" data-value="crt">CRT</button>
+              <button class="opt-btn" data-setting="filter" data-value="scanlines">SCANLINES</button>
+              <button class="opt-btn" data-setting="filter" data-value="off">OFF</button>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Brightness</span>
             <div class="opt-slider">
-              <input type="range" min="0" max="100" value="80" />
+              <input type="range" min="0" max="100" value="80" data-setting="brightness" />
               <span class="slider-val">80%</span>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Screen Shake</span>
             <div class="opt-value">
-              <button class="opt-btn active">ON</button>
-              <button class="opt-btn">OFF</button>
+              <button class="opt-btn active" data-setting="shake" data-value="on">ON</button>
+              <button class="opt-btn" data-setting="shake" data-value="off">OFF</button>
             </div>
           </div>
         </div>
@@ -55,28 +234,28 @@
           <div class="opt-row">
             <span class="opt-label">Master Volume</span>
             <div class="opt-slider">
-              <input type="range" min="0" max="100" value="90" />
+              <input type="range" min="0" max="100" value="90" data-setting="master-vol" />
               <span class="slider-val">90%</span>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">SFX Volume</span>
             <div class="opt-slider">
-              <input type="range" min="0" max="100" value="100" />
+              <input type="range" min="0" max="100" value="100" data-setting="sfx-vol" />
               <span class="slider-val">100%</span>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Music Volume</span>
             <div class="opt-slider">
-              <input type="range" min="0" max="100" value="70" />
+              <input type="range" min="0" max="100" value="70" data-setting="music-vol" />
               <span class="slider-val">70%</span>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Voice Volume</span>
             <div class="opt-slider">
-              <input type="range" min="0" max="100" value="85" />
+              <input type="range" min="0" max="100" value="85" data-setting="voice-vol" />
               <span class="slider-val">85%</span>
             </div>
           </div>
@@ -87,27 +266,27 @@
           <div class="opt-row">
             <span class="opt-label">Difficulty</span>
             <div class="opt-value">
-              <button class="opt-btn">EASY</button>
-              <button class="opt-btn active">NORMAL</button>
-              <button class="opt-btn">HARD</button>
+              <button class="opt-btn" data-setting="difficulty" data-value="easy">EASY</button>
+              <button class="opt-btn active" data-setting="difficulty" data-value="normal">NORMAL</button>
+              <button class="opt-btn" data-setting="difficulty" data-value="hard">HARD</button>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Round Time</span>
             <div class="opt-value">
-              <button class="opt-btn">30s</button>
-              <button class="opt-btn active">60s</button>
-              <button class="opt-btn">99s</button>
-              <button class="opt-btn">∞</button>
+              <button class="opt-btn" data-setting="round-time" data-value="30">30s</button>
+              <button class="opt-btn active" data-setting="round-time" data-value="60">60s</button>
+              <button class="opt-btn" data-setting="round-time" data-value="99">99s</button>
+              <button class="opt-btn" data-setting="round-time" data-value="inf">∞</button>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Rounds to Win</span>
             <div class="opt-value">
-              <button class="opt-btn">1</button>
-              <button class="opt-btn active">2</button>
-              <button class="opt-btn">3</button>
-              <button class="opt-btn">5</button>
+              <button class="opt-btn" data-setting="rounds-win" data-value="1">1</button>
+              <button class="opt-btn active" data-setting="rounds-win" data-value="2">2</button>
+              <button class="opt-btn" data-setting="rounds-win" data-value="3">3</button>
+              <button class="opt-btn" data-setting="rounds-win" data-value="5">5</button>
             </div>
           </div>
         </div>
@@ -117,15 +296,15 @@
           <div class="opt-row">
             <span class="opt-label">Input Display</span>
             <div class="opt-value">
-              <button class="opt-btn active">ARCADE</button>
-              <button class="opt-btn">MODERN</button>
+              <button class="opt-btn active" data-setting="input-display" data-value="arcade">ARCADE</button>
+              <button class="opt-btn" data-setting="input-display" data-value="modern">MODERN</button>
             </div>
           </div>
           <div class="opt-row">
             <span class="opt-label">Button Config</span>
             <div class="opt-value">
-              <button class="opt-btn active">DEFAULT</button>
-              <button class="opt-btn">CUSTOM</button>
+              <button class="opt-btn active" data-setting="button-config" data-value="default">DEFAULT</button>
+              <button class="opt-btn" data-setting="button-config" data-value="custom">CUSTOM</button>
             </div>
           </div>
         </div>
@@ -133,13 +312,129 @@
       </div>
 
       <div class="options-footer">
-        <button class="opt-reset">RESET TO DEFAULT</button>
-        <button class="opt-save">SAVE & EXIT</button>
+        <button class="opt-reset" id="opt-reset">RESET TO DEFAULT</button>
+        <button class="opt-save" id="opt-save">SAVE & EXIT</button>
       </div>
 
     </div>
   </div>
 
-  <script src="js/main.js"></script>
+  <div class="save-toast" id="save-toast">SETTINGS SAVED!</div>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/background.js"></script>
+
+  <script>
+    const DEFAULTS = {
+      'filter': 'crt',
+      'brightness': '80',
+      'shake': 'on',
+      'master-vol': '90',
+      'sfx-vol': '100',
+      'music-vol': '70',
+      'voice-vol': '85',
+      'difficulty': 'normal',
+      'round-time': '60',
+      'rounds-win': '2',
+      'input-display': 'arcade',
+      'button-config': 'default'
+    };
+
+    function loadSettings() {
+      try {
+        const saved = localStorage.getItem('soukbrawl_options');
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveSettings(settings) {
+      localStorage.setItem('soukbrawl_options', JSON.stringify(settings));
+    }
+
+    function applySettings(settings) {
+      // Apply button states
+      document.querySelectorAll('.opt-btn').forEach(btn => {
+        const setting = btn.dataset.setting;
+        const value = btn.dataset.value;
+        const savedValue = settings[setting];
+        if (savedValue !== undefined) {
+          btn.classList.toggle('active', value === savedValue);
+        }
+      });
+
+      // Apply slider values
+      document.querySelectorAll('.opt-slider input[type="range"]').forEach(slider => {
+        const setting = slider.dataset.setting;
+        const savedValue = settings[setting];
+        if (savedValue !== undefined) {
+          slider.value = savedValue;
+          slider.nextElementSibling.textContent = savedValue + '%';
+        }
+      });
+    }
+
+    function collectSettings() {
+      const settings = {};
+      document.querySelectorAll('.opt-btn.active').forEach(btn => {
+        settings[btn.dataset.setting] = btn.dataset.value;
+      });
+      document.querySelectorAll('.opt-slider input[type="range"]').forEach(slider => {
+        settings[slider.dataset.setting] = slider.value;
+      });
+      return settings;
+    }
+
+    // Button toggle
+    document.querySelectorAll('.opt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const setting = btn.dataset.setting;
+        const group = btn.closest('.opt-value');
+        group.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Slider update
+    document.querySelectorAll('.opt-slider input[type="range"]').forEach(slider => {
+      slider.addEventListener('input', () => {
+        slider.nextElementSibling.textContent = slider.value + '%';
+      });
+    });
+
+    // Reset
+    document.getElementById('opt-reset').addEventListener('click', () => {
+      applySettings(DEFAULTS);
+      showToast('RESET TO DEFAULT');
+    });
+
+    // Save
+    document.getElementById('opt-save').addEventListener('click', () => {
+      const settings = collectSettings();
+      saveSettings(settings);
+      showToast('SETTINGS SAVED!');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 800);
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('save-toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+      const settings = loadSettings();
+      applySettings(Object.keys(settings).length > 0 ? settings : DEFAULTS);
+      if (typeof BackgroundAnimation !== 'undefined') {
+        new BackgroundAnimation();
+      }
+    });
+  </script>
 </body>
 </html>
