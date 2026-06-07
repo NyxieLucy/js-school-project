@@ -374,6 +374,108 @@ class Fighter {
       this.spriteWrap.style.transform = transform;
     }
   }
+
+  // ─── SUPER BOMB ───────────────────────────────────────────────
+  canUseSuper() {
+    return this.canAttack() &&
+      this.state !== FighterState.HIT &&
+      this.state !== FighterState.KNOCKED_DOWN;
+  }
+
+  triggerSuperBomb(opponent) {
+    if (!this.canUseSuper()) return false;
+
+    this.superMeter = 0;
+
+    const game = window.fightGame;
+    if (game) {
+      game.hitStop = 120;
+      game.gameActive = false;
+    }
+
+    this.playSuperCutscene(opponent);
+
+    return true;
+  }
+
+  playSuperCutscene(opponent) {
+    const video = document.getElementById('super-cutscene');
+    if (!video) {
+      this.executeSuperBomb(opponent);
+      return;
+    }
+
+    // Set character-specific video source
+    const cutscenePath = `assets/cutscenes/${this.character}-super.mp4`;
+    video.src = cutscenePath;
+    video.load();
+
+    video.classList.add('active');
+    video.currentTime = 0;
+
+    const onVideoEnd = () => {
+      video.classList.remove('active');
+      video.removeEventListener('ended', onVideoEnd);
+      video.removeEventListener('error', onVideoError);
+      this.executeSuperBomb(opponent);
+    };
+
+    const onVideoError = () => {
+      video.classList.remove('active');
+      video.removeEventListener('ended', onVideoEnd);
+      video.removeEventListener('error', onVideoError);
+      this.executeSuperBomb(opponent);
+    };
+
+    video.addEventListener('ended', onVideoEnd);
+    video.addEventListener('error', onVideoError);
+
+    video.play().catch(() => onVideoError());
+  }
+
+  executeSuperBomb(opponent) {
+    const game = window.fightGame;
+    const layer = document.getElementById('message-layer');
+
+    if (game) {
+      document.body.style.animation = 'superShake 0.5s ease';
+      setTimeout(() => document.body.style.animation = '', 500);
+    }
+
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #fff; z-index: 999; opacity: 1;
+      animation: superFlash 0.3s ease forwards;
+    `;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 300);
+
+    const explosion = document.createElement('div');
+    explosion.textContent = '💥';
+    explosion.style.cssText = `
+      position: absolute; left: ${opponent.x}px; top: ${opponent.y - 100}px;
+      font-size: 120px; z-index: 500; transform: translate(-50%, -50%);
+      animation: superExplode 0.6s ease forwards;
+    `;
+    layer.appendChild(explosion);
+
+    opponent.health = 0;
+    opponent.setState(FighterState.LOSING);
+
+    const koMsg = document.createElement('div');
+    koMsg.className = 'ko-message';
+    koMsg.textContent = 'K.O.!';
+    koMsg.style.fontSize = '3rem';
+    layer.appendChild(koMsg);
+
+    setTimeout(() => {
+      explosion.remove();
+      if (game && !game.roundEnded) {
+        game.endRoundByKO(this, opponent);
+      }
+    }, 1500);
+  }
 }
 
 // ─── Game Controller ────────────────────────────────────────────
@@ -407,16 +509,16 @@ class FightGame {
     this.startTimer();
     this.updateRoundDisplay();
     this.updateWinDots();
+
+    window.fightGame = this;
   }
 
   loadConfig() {
-    // Try sessionStorage first (for versus/training), then localStorage (for arcade)
     let cfg = {};
     try {
       const session = sessionStorage.getItem('soukbrawl_fight');
       if (session) cfg = JSON.parse(session);
     } catch (e) { }
-    // Merge with localStorage arcade selections
     try {
       const p1Arcade = localStorage.getItem('p1_selected_arcade');
       const p2Arcade = localStorage.getItem('p2_selected_arcade');
@@ -462,7 +564,13 @@ class FightGame {
     if (key === p1k.PUNCH) this.p1.startMove('punch');
     if (key === p1k.KICK) this.p1.startMove('kick');
     if (key === p1k.BLOCK) this.p1.startBlocking();
-    if (key === p1k.SPECIAL) this.p1.startMove('special');
+    if (key === p1k.SPECIAL) {
+      if (this.p1.superMeter >= this.p1.maxSuper) {
+        this.p1.triggerSuperBomb(this.p2);
+      } else {
+        this.p1.startMove('special');
+      }
+    }
 
     const p2k = GameConfig.KEYS_P2;
     if (key === p2k.UP) this.p2.jump();
@@ -470,7 +578,13 @@ class FightGame {
     if (key === p2k.PUNCH) this.p2.startMove('punch');
     if (key === p2k.KICK) this.p2.startMove('kick');
     if (key === p2k.BLOCK) this.p2.startBlocking();
-    if (key === p2k.SPECIAL) this.p2.startMove('special');
+    if (key === p2k.SPECIAL) {
+      if (this.p2.superMeter >= this.p2.maxSuper) {
+        this.p2.triggerSuperBomb(this.p1);
+      } else {
+        this.p2.startMove('special');
+      }
+    }
   }
 
   handleKeyUp(e) {
@@ -516,7 +630,6 @@ class FightGame {
       this.hitStop = GameConfig.BALANCE.HITSTOP_DURATION;
       this.showHitMessage(attacker.combo > 1 ? `${attacker.combo} HIT COMBO!` : 'HIT!', attacker.x, attacker.y);
 
-      // Check for KO immediately after damage
       if (defender.health <= 0 && !this.roundEnded) {
         this.endRoundByKO(attacker, defender);
       }
@@ -580,7 +693,10 @@ class FightGame {
     const roundEl = document.getElementById('round-indicator');
     if (roundEl) {
       const roundAr = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة'];
-      roundEl.innerHTML = `<div>ROUND ${this.round}</div><div class="round-ar">الجولة ${roundAr[this.round - 1] || this.round}</div>`;
+      roundEl.innerHTML = `
+        <div class="round-num">ROUND ${this.round}</div>
+        <div class="round-ar">الجولة ${roundAr[this.round - 1] || this.round}</div>
+      `;
     }
   }
 
@@ -604,7 +720,6 @@ class FightGame {
     this.showMessage(`${winner.name} WINS!`);
     this.updateWinDots();
 
-    // Check if match is over
     const winsNeeded = Math.ceil(this.maxRounds / 2);
     if (winner.wins >= winsNeeded) {
       setTimeout(() => this.showMatchOver(winner), 2000);
@@ -663,10 +778,12 @@ class FightGame {
 
     const msg = document.createElement('div');
     msg.className = 'perfect-message';
-    msg.innerHTML = `<div>${winner.name}</div><div style="font-size:18px;margin-top:10px">WINS THE MATCH!</div>`;
+    msg.innerHTML = `
+      <div class="winner-name">${winner.name}</div>
+      <div class="winner-sub">WINS THE MATCH!</div>
+    `;
     layer.appendChild(msg);
 
-    // Show return options after delay
     setTimeout(() => {
       const overlay = document.getElementById('pause-menu');
       if (overlay) {
@@ -774,3 +891,4 @@ window.addEventListener('load', () => {
   const game = new FightGame();
   game.loop();
 });
+
