@@ -361,7 +361,7 @@ class Fighter {
     const scale = window.innerHeight / GameConfig.CANVAS.HEIGHT;
     const arenaWidthPercent = (this.x / GAME_WIDTH) * 100;
     const floorPercent = (GROUND_Y / GAME_HEIGHT) * 100;
-    const jumpOffset = this.y * scale;
+    const jumpOffset = -this.y * scale;
     this.arenaElement.style.left = arenaWidthPercent + '%';
     this.arenaElement.style.bottom = `calc(${100 - floorPercent}% + ${jumpOffset}px)`;
     if (this.spriteWrap) {
@@ -415,7 +415,7 @@ class FightGame {
     try {
       const session = sessionStorage.getItem('soukbrawl_fight');
       if (session) cfg = JSON.parse(session);
-    } catch (e) {}
+    } catch (e) { }
     // Merge with localStorage arcade selections
     try {
       const p1Arcade = localStorage.getItem('p1_selected_arcade');
@@ -425,7 +425,7 @@ class FightGame {
       if (p2Arcade && p2Arcade !== 'unknown') cfg.p2CharId = p2Arcade;
       if (diff) cfg.difficulty = diff;
       if (p1Arcade) cfg.mode = 'arcade';
-    } catch (e) {}
+    } catch (e) { }
     return cfg;
   }
 
